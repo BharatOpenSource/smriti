@@ -46,5 +46,5 @@ Before doing anything else each session:
 
 ## Git
 
-Repo: TBD (GitHub repo not yet created)
+Repo: https://github.com/BharatOpenSource/smriti
 Branch convention: `feature/<short-description>`
