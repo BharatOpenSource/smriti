@@ -4,13 +4,13 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["src/**/*", "cli/**/*"],
+  "include": ["src/**/*", "cli/**/*", "lsp/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }

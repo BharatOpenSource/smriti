@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli/index.ts",
+    "lsp": "node dist/lsp/server.js --stdio",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -17,5 +18,9 @@
     "tsx": "^4.0.0",
     "typescript": "^5.4.0",
     "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "vscode-languageserver": "^10.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
   }
 }
