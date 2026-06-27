@@ -216,10 +216,10 @@ export interface TypedField extends Node {
 }
 
 export type SmritiType =
-  | { kind: 'sankhya' }
+  | { kind: 'sankhya'; min?: number; max?: number }
   | { kind: 'bhinnaanka' }
   | { kind: 'dashaamsha' }
-  | { kind: 'vakya' }
+  | { kind: 'vakya'; pattern?: string }
   | { kind: 'tithi' }
   | { kind: 'antara' }
   | { kind: 'tarka' }

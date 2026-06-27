@@ -11,6 +11,10 @@ import type { ResolveContext } from './resolver.js'
 function typeStr(t: SmritiType): string {
   if (t.kind === 'krama') return `krama[${typeStr(t.of)}]`
   if (t.kind === 'kosa')  return `kosa[${typeStr(t.key)}, ${typeStr(t.value)}]`
+  if (t.kind === 'sankhya' && (t.min !== undefined || t.max !== undefined)) {
+    return `sankhya ${t.min ?? ''}..${t.max ?? ''}`
+  }
+  if (t.kind === 'vakya' && t.pattern !== undefined) return `vakya "${t.pattern}"`
   return t.kind
 }
 
@@ -438,6 +442,16 @@ class Checker {
   }
 
   private checkType(type: SmritiType, pos: Pos) {
+    if (type.kind === 'sankhya') {
+      if (type.min !== undefined && type.max !== undefined && type.min > type.max) {
+        this.fail(`sankhya constraint: min (${type.min}) must not exceed max (${type.max})`, pos)
+      }
+    }
+    if (type.kind === 'vakya' && type.pattern !== undefined) {
+      try { new RegExp(type.pattern) } catch {
+        this.fail(`vakya pattern is not a valid regular expression: ${type.pattern}`, pos)
+      }
+    }
     if (type.kind === 'krama') this.checkType(type.of, pos)
     if (type.kind === 'kosa') {
       this.checkType(type.key, pos)

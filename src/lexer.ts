@@ -53,7 +53,7 @@ export const enum TokenKind {
   LPAREN = '(', RPAREN = ')',
   LBRACKET = '[', RBRACKET = ']',
   COLON = ':', COMMA = ',',
-  DOT = '.',
+  DOT = '.', DOTDOT = '..',
   ARROW = '→',
 
   // Expression operators
@@ -166,6 +166,12 @@ export function lex(source: string): Token[] {
     if (ch === '<') { tokens.push({ kind: TokenKind.LT,   value: '<',  pos: pos() }); i++; continue }
     if (ch === '>') { tokens.push({ kind: TokenKind.GT,   value: '>',  pos: pos() }); i++; continue }
     if (ch === '!') { tokens.push({ kind: TokenKind.BANG, value: '!',  pos: pos() }); i++; continue }
+
+    // Range operator — must be checked before single-char DOT
+    if (ch === '.' && peek(1) === '.') {
+      tokens.push({ kind: TokenKind.DOTDOT, value: '..', pos: pos() })
+      i += 2; continue
+    }
 
     // Punctuation (includes Unicode arrow →)
     if (PUNCTUATION[ch]) {

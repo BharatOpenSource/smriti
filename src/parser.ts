@@ -467,10 +467,27 @@ class Parser {
   private parseType(): SmritiType {
     const t = this.advance()
     switch (t.kind) {
-      case TokenKind.SANKHYA:    return { kind: 'sankhya' }
+      case TokenKind.SANKHYA: {
+        // Optional range constraint: sankhya min..max | sankhya min.. | sankhya ..max
+        let min: number | undefined
+        let max: number | undefined
+        if (this.check(TokenKind.NUMBER)) {
+          min = parseFloat(this.advance().value)
+          if (this.tryEat(TokenKind.DOTDOT)) {
+            if (this.check(TokenKind.NUMBER)) max = parseFloat(this.advance().value)
+          }
+        } else if (this.tryEat(TokenKind.DOTDOT)) {
+          if (this.check(TokenKind.NUMBER)) max = parseFloat(this.advance().value)
+        }
+        return { kind: 'sankhya', ...(min !== undefined && { min }), ...(max !== undefined && { max }) }
+      }
       case TokenKind.BHINNAANKA: return { kind: 'bhinnaanka' }
       case TokenKind.DASHAAMSHA: return { kind: 'dashaamsha' }
-      case TokenKind.VAKYA:      return { kind: 'vakya' }
+      case TokenKind.VAKYA: {
+        // Optional regex pattern constraint: vakya "pattern"
+        const pattern = this.check(TokenKind.STRING) ? this.advance().value : undefined
+        return { kind: 'vakya', ...(pattern !== undefined && { pattern }) }
+      }
       case TokenKind.TITHI:      return { kind: 'tithi' }
       case TokenKind.ANTARA:     return { kind: 'antara' }
       case TokenKind.TARKA:      return { kind: 'tarka' }
