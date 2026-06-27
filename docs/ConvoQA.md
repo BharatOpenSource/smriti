@@ -153,8 +153,36 @@ This is architectural coherence from first principles, not coincidence.
 - **CLI binary:** `smr` (like `tsc` for TypeScript)
 - **Self-hosting:** Bootstrap in TypeScript. When Smriti has full computation + WASM runtime, rewrite Sutra in Smriti itself.
 
+### Sanskrit notation — decided 2026-06-27
+
+**Context:** `(){}[]` are Western mathematical imports (Cantor, Euler). Sanskrit solved the same structural problems differently.
+
+**Relevant Sanskrit traditions:**
+- **Pāṇini's Ashtadhyayi** — formal grammar notation using anuvṛtti (rule inheritance), IT markers (meta-information on rules, like `vikalpa`), and `iti` (इति) as a named-close marker. No visual brackets — structure from position and context.
+- **Mathematical verse** — Sanskrit math written in shloka (metered verse). Structure from word order and metre, not punctuation. No `;` equivalent.
+- **Daṇḍa (`।`)** — Sanskrit sentence-end marker. Equivalent to `.` or `;`.
+
+**Decisions:**
+- `iti` (इति) added as optional named-close: `} iti block-name`. Validates that the close matches the opener. Useful for deep nesting. Optional — existing files without `iti` remain valid.
+- `।` (U+0964) reserved for future use as statement separator.
+- `{}` retained for structural grouping — removing them hurts parser error recovery and editor tooling.
+- Pāṇinian philosophy (anuvṛtti = rule inheritance) to influence **semantics**: sutra inheritance, field propagation — not syntax.
+
+### Semantics — in progress 2026-06-27
+
+Current implementation covers: metadata, sequential steps, binary/trivalent branching, parallel tracks, sub-process invocation, typed field declarations.
+
+**Known gaps (being worked):**
+- No expression language — `niyama` only matches literal values, not computed conditions
+- No formal data flow — aagama/nirgama names not verified to connect between steps
+- No constraints on types (e.g., `sankhya` with a range, `vakya` with a pattern)
+- No per-step error paths — only global `anaapta`
+- No samaya escalation — SLA declared but no routing on timeout
+- No sutra inheritance (anuvṛtti) — `.sut` files can be invoked but not extended
+- Trigger (`ghatana`) is descriptive only — no evaluatable schedule or event condition
+
 ## Open Questions / Tasks
 
+- [ ] Semantics design: expression language, data flow, constraints, error paths (in progress)
 - [ ] Indic script rendering: canonical display script (Devanagari recommended)
-- [ ] LSP server (after parser stable)
-- [ ] Tree-sitter grammar for highlighting (after LSP)
+- [ ] Tree-sitter grammar for highlighting (after LSP stable)

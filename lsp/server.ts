@@ -163,6 +163,7 @@ const KEYWORD_DOCS: Partial<Record<TokenKind, string>> = {
   [TokenKind.SATYA]:      '**satya** (सत्य) — `tarka` value: true.',
   [TokenKind.ASATYA]:     '**asatya** (असत्य) — `tarka` value: false.',
   [TokenKind.AVYAKTA]:    '**avyakta** (अव्यक्त) — `tarka` value: indeterminate — neither true nor false. Catches unresolved, pending, or error states.',
+  [TokenKind.ITI]:        '**iti** (इति) — Named close marker (Pāṇinian). `} iti block-name` closes a block and names it, making deep nesting explicit. Validated: the name must match the opening block name.',
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────

@@ -48,6 +48,13 @@ class Parser {
     return null
   }
 
+  // Parses optional `iti <name>` after a closing brace. Returns the name or undefined.
+  private tryEatIti(): string | undefined {
+    if (!this.check(TokenKind.ITI)) return undefined
+    this.advance()
+    return this.eat(TokenKind.IDENTIFIER, 'iti').value
+  }
+
   // ─── Top level ──────────────────────────────────────────────────────────────
 
   parseFile(): SmritiFile {
@@ -77,7 +84,8 @@ class Parser {
     const flow = this.parseFlow()
 
     this.eat(TokenKind.RBRACE, `smriti '${name}'`)
-    return { kind: 'smriti', name, metadata, references, participants, trigger, flow, pos }
+    const itiName = this.tryEatIti()
+    return { kind: 'smriti', name, itiName, metadata, references, participants, trigger, flow, pos }
   }
 
   private parseSutra(): SutraDecl {
@@ -96,7 +104,8 @@ class Parser {
       : undefined
 
     this.eat(TokenKind.RBRACE, `sutra '${name}'`)
-    return { kind: 'sutra', name, metadata, aagama, flow, nirgama, pos }
+    const itiName = this.tryEatIti()
+    return { kind: 'sutra', name, itiName, metadata, aagama, flow, nirgama, pos }
   }
 
   // ─── Metadata ───────────────────────────────────────────────────────────────
@@ -203,7 +212,8 @@ class Parser {
     }
 
     this.eat(TokenKind.RBRACE, `paksha '${name}'`)
-    return { kind: 'paksha', name, bhumika, adhikara, pramana, pos }
+    const itiName = this.tryEatIti()
+    return { kind: 'paksha', name, itiName, bhumika, adhikara, pramana, pos }
   }
 
   // ─── Trigger ────────────────────────────────────────────────────────────────
@@ -302,7 +312,8 @@ class Parser {
     }
 
     this.eat(TokenKind.RBRACE, `pada '${name}'`)
-    return { kind: 'pada', name, karta, kaarya, aagama, nirgama, samaya, khanda, routing, pos }
+    const itiName = this.tryEatIti()
+    return { kind: 'pada', name, itiName, karta, kaarya, aagama, nirgama, samaya, khanda, routing, pos }
   }
 
   private parseDuration(): Duration {
@@ -328,7 +339,8 @@ class Parser {
     if (clauses.length === 0)
       throw new ParseError(`vibhaga '${on}' has no niyama clauses`, pos)
     this.eat(TokenKind.RBRACE, `vibhaga '${on}'`)
-    return { kind: 'vibhaga', on, clauses, pos }
+    const itiName = this.tryEatIti()
+    return { kind: 'vibhaga', on, itiName, clauses, pos }
   }
 
   private parseNiyama(): NiyamaClause {

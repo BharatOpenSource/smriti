@@ -26,14 +26,26 @@ class Checker {
   }
 
   private checkSmriti(decl: SmritiDecl) {
+    this.checkIti(decl.name, decl.itiName, decl.pos)
     const participantNames = new Set(decl.participants.map(p => p.name))
+    for (const p of decl.participants) this.checkIti(p.name, p.itiName, p.pos)
     this.checkFlow(decl.flow, participantNames)
   }
 
   private checkSutra(decl: SutraDecl) {
+    this.checkIti(decl.name, decl.itiName, decl.pos)
     this.checkFlow(decl.flow, new Set())
     if (decl.aagama) this.checkTypedFields(decl.aagama)
     if (decl.nirgama) this.checkTypedFields(decl.nirgama)
+  }
+
+  private checkIti(blockName: string, itiName: string | undefined, pos: Pos) {
+    if (itiName !== undefined && itiName !== blockName) {
+      this.fail(
+        `iti name '${itiName}' does not match block name '${blockName}'`,
+        pos,
+      )
+    }
   }
 
   // ─── Flow ──────────────────────────────────────────────────────────────────
@@ -107,6 +119,7 @@ class Checker {
   // ─── Step ──────────────────────────────────────────────────────────────────
 
   private checkPada(pada: PadaDecl, stepNames: Set<string>, participants: Set<string>) {
+    this.checkIti(pada.name, pada.itiName, pada.pos)
     // karta must reference a declared paksha (if participants are declared)
     if (pada.karta && participants.size > 0 && !participants.has(pada.karta)) {
       this.fail(
@@ -133,6 +146,7 @@ class Checker {
   // ─── Branching ─────────────────────────────────────────────────────────────
 
   private checkVibhaga(vibhaga: VibhagaDecl, stepNames: Set<string>) {
+    if (vibhaga.itiName) this.checkIti(vibhaga.on, vibhaga.itiName, vibhaga.pos)
     // All branch targets must exist
     for (const clause of vibhaga.clauses) {
       const target = clause.target

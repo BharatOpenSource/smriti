@@ -36,6 +36,9 @@ export const enum TokenKind {
   // stara values
   PUBLIC = 'public', RESTRICTED = 'restricted', PRIVATE = 'private',
 
+  // Meta-notation (Pāṇinian)
+  ITI = 'iti',
+
   // Literals
   IDENTIFIER = 'identifier',
   STRING = 'string',
@@ -90,6 +93,7 @@ const KEYWORDS: Record<string, TokenKind> = {
   satya: TokenKind.SATYA,         asatya: TokenKind.ASATYA,
   avyakta: TokenKind.AVYAKTA,     public: TokenKind.PUBLIC,
   restricted: TokenKind.RESTRICTED, private: TokenKind.PRIVATE,
+  iti: TokenKind.ITI,
 }
 
 const PUNCTUATION: Record<string, TokenKind> = {

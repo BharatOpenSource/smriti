@@ -139,6 +139,50 @@ smriti bad {
     expect(errors(src)).toMatch(/kosa key type must be a scalar/)
   })
 
+  it('accepts correct iti names on all block types', () => {
+    const src = `
+smriti test-iti {
+  paksha applicant { bhumika: citizen adhikara: submit } iti applicant
+  pravah {
+    pada submit {
+      karta: applicant
+      nirgama: result (tarka)
+    } iti submit
+    vibhaga result {
+      niyama satya    → svasti
+      niyama asatya   → anaapta
+      niyama avyakta  → anaapta
+    } iti result
+  }
+} iti test-iti
+`
+    expect(() => valid(src)).not.toThrow()
+  })
+
+  it('rejects iti name that does not match block name', () => {
+    const src = `
+smriti my-process {
+  pravah {
+    pada step { karta: actor }
+    svasti
+  }
+} iti wrong-name
+`
+    expect(errors(src)).toMatch(/iti name 'wrong-name' does not match block name 'my-process'/)
+  })
+
+  it('rejects iti name mismatch on a pada', () => {
+    const src = `
+smriti test {
+  pravah {
+    pada submit { karta: actor } iti verify
+    svasti
+  }
+}
+`
+    expect(errors(src)).toMatch(/iti name 'verify' does not match block name 'submit'/)
+  })
+
   it('collects all errors before throwing', () => {
     const src = `
 smriti bad {

@@ -20,6 +20,7 @@ export interface SmritiFile extends Node {
 export interface SmritiDecl extends Node {
   kind: 'smriti'
   name: string
+  itiName?: string
   metadata: Metadata
   references: ReferenceDecl[]
   participants: PakshaDecl[]
@@ -30,6 +31,7 @@ export interface SmritiDecl extends Node {
 export interface SutraDecl extends Node {
   kind: 'sutra'
   name: string
+  itiName?: string
   metadata: Metadata
   aagama?: TypedField[]
   flow: FlowDecl
@@ -72,6 +74,7 @@ export interface LagnaDecl extends Node {
 export interface PakshaDecl extends Node {
   kind: 'paksha'
   name: string
+  itiName?: string
   bhumika?: string
   adhikara: string[]
   pramana?: string
@@ -116,6 +119,7 @@ export type FlowItem =
 export interface PadaDecl extends Node {
   kind: 'pada'
   name: string
+  itiName?: string
   karta?: string
   kaarya?: string
   aagama: TypedField[]
@@ -145,6 +149,8 @@ export interface Duration extends Node {
 
 export interface VibhagaDecl extends Node {
   kind: 'vibhaga'
+  name?: string
+  itiName?: string
   on: string
   clauses: NiyamaClause[]
 }

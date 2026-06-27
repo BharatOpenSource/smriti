@@ -6,6 +6,7 @@
     { "include": "#comment" },
     { "include": "#string" },
     { "include": "#property-key" },
+    { "include": "#keyword-iti" },
     { "include": "#keyword-top" },
     { "include": "#keyword-flow" },
     { "include": "#keyword-terminal" },
@@ -39,6 +40,12 @@
       "comment": "Top-level declarators — name a block or entity",
       "name": "entity.name.type.smriti",
       "match": "\\b(smriti|sutra|paksha|sangama|lagna|ghatana|vrtti|hetu|varna|anubhaga|anugama|aavaha)\\b"
+    },
+
+    "keyword-iti": {
+      "comment": "iti — Pāṇinian named close marker",
+      "name": "keyword.operator.iti.smriti",
+      "match": "\\biti\\b"
     },
 
     "keyword-flow": {
