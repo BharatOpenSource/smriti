@@ -54,7 +54,14 @@
   - HTTP fetch is the only remaining seam; plugs in when pravaaha ships
   - **Test count: 189 (was 180)**
 
+- [x] #7 Type constraints — `sankhya` range + `vakya` pattern
+  - Syntax: `amount (sankhya 0..100)`, `age (sankhya 18..)`, `pct (sankhya ..100)`, `gstin (vakya "[A-Z0-9]{15}")`
+  - New `DOTDOT` token; AST stores `min?/max?` on sankhya, `pattern?` on vakya
+  - Typechecker: min ≤ max enforced, regex pattern validated; type compat still kind-only
+  - 18 new tests in `tests/constraints.test.ts`, 207 total
+- **Test count: 207 (was 189)**
+
 **Next session — starting with:**
-- [ ] #7 Type constraints — `sankhya` with range, `vakya` with pattern
+- [ ] #8 `ghatana` semantics — evaluatable trigger expressions
 
 **Full pending list:** see `docs/todo.md`
