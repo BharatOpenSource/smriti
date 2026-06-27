@@ -1,0 +1,21 @@
+{
+  "name": "@bharatopensource/sutra",
+  "version": "0.1.0",
+  "description": "Toolchain for the Smriti language — parses, validates, and compiles .smr and .sut files",
+  "type": "module",
+  "bin": {
+    "smr": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

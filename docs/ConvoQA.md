@@ -143,10 +143,18 @@ This is architectural coherence from first principles, not coincidence.
 - `varna` (color) as variable name is historically grounded: Indian mathematics used color names for unknowns.
 - `vikalpa` is Panini's term for optional rules — directly applicable here.
 
+### Toolchain — locked 2026-06-27
+
+- **Implementation language:** TypeScript
+- **Parser:** Hand-written recursive descent — one function per grammar rule. Same approach as Go, Rust, TypeScript compilers. Full control over error messages and recovery.
+- **Grammar spec:** Formal EBNF document at `spec/grammar.ebnf` — the publishable language standard. Parser implements it; both change together.
+- **Editor integration:** LSP server (TypeScript, after parser stable) + thin Tree-sitter grammar for highlighting only (GitHub, Neovim).
+- **v0.1 target:** YAML emitter → pravaaha v0.2
+- **CLI binary:** `smr` (like `tsc` for TypeScript)
+- **Self-hosting:** Bootstrap in TypeScript. When Smriti has full computation + WASM runtime, rewrite Sutra in Smriti itself.
+
 ## Open Questions / Tasks
 
-- [ ] Grammar approach: PEG vs Tree-sitter (decision needed before parser work begins)
-- [ ] Indic script rendering: decide canonical script for display (Devanagari recommended as Sanskrit's native script)
-- [ ] v0.1 toolchain scope confirmation
-- [ ] GitHub repo creation for Sutra (currently local folder only)
-- [ ] Draft formal grammar using locked vocabulary
+- [ ] Indic script rendering: canonical display script (Devanagari recommended)
+- [ ] LSP server (after parser stable)
+- [ ] Tree-sitter grammar for highlighting (after LSP)
