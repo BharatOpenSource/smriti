@@ -1,0 +1,45 @@
+{
+  "name": "smriti-language",
+  "displayName": "Smriti",
+  "description": "Language support for Smriti (.smr / .sut) files — syntax highlighting, diagnostics, and hover docs",
+  "version": "0.1.0",
+  "publisher": "BharatOpenSource",
+  "repository": "https://github.com/BharatOpenSource/smriti",
+  "license": "MIT",
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Programming Languages"],
+  "keywords": ["smriti", "smr", "sut", "process", "DSL"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "smriti",
+        "aliases": ["Smriti", "smr"],
+        "extensions": [".smr", ".sut"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "smriti",
+        "scopeName": "source.smriti",
+        "path": "./syntaxes/smriti.tmLanguage.json"
+      }
+    ]
+  },
+  "activationEvents": ["onLanguage:smriti"],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --format=cjs",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --format=cjs --watch",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.75.0",
+    "esbuild": "^0.21.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^10.0.1"
+  }
+}

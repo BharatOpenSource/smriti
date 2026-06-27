@@ -1,3 +1,6 @@
 node_modules/
 dist/
 *.js.map
+editors/vscode/dist/
+editors/vscode/node_modules/
+editors/vscode/*.vsix
