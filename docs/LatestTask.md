@@ -47,7 +47,14 @@
     vibhaga on aavaha-produced fields was incorrectly rejected. Two regression tests added.
 - **Test count: 180 (was 178)**
 
+- [x] #6 Registry resolver — `org/name@version` sangama imports with local cache
+  - `parseRegistryUri()` + `registryCachePath()` exported from `src/resolver.ts`
+  - `RegistryResolver` checks `~/.smr/registry/<org>/<name>/<version>.smr`; injectable `cacheRoot` for tests
+  - `smr fetch <uri>`: no `--from` → explains + shows path; `--from <file>` → validates + writes to cache
+  - HTTP fetch is the only remaining seam; plugs in when pravaaha ships
+  - **Test count: 189 (was 180)**
+
 **Next session — starting with:**
-- [ ] #6 Registry resolver — `org/name@version` format for `sangama` imports
+- [ ] #7 Type constraints — `sankhya` with range, `vakya` with pattern
 
 **Full pending list:** see `docs/todo.md`
