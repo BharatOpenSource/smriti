@@ -99,8 +99,14 @@ function buildSteps(
       steps.push({ id: 'anaapta', name: 'Rejected', terminal: true, outcome: 'failure' })
     } else if (item.kind === 'sthiti') {
       steps.push({ id: item.name, name: prettify(item.name), status: item.name })
+    } else if (item.kind === 'aavaha') {
+      const ref = nameRefStr(item.target)
+      const step: Record<string, unknown> = { id: `aavaha-${ref}`, name: prettify(ref), invoke: ref }
+      if (item.aagama.length > 0) step.inputs  = fields(item.aagama)
+      if (item.nirgama.length > 0) step.outputs = fields(item.nirgama)
+      steps.push(step)
     }
-    // vibhaga, anubhaga, anugama, aavaha: handled elsewhere or future work
+    // vibhaga, anubhaga, anugama: handled elsewhere or future work
   }
 
   return steps

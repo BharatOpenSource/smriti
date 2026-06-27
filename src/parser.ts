@@ -431,7 +431,7 @@ class Parser {
   private parseAavaha(): AavahaDecl {
     const pos = this.pos()
     this.eat(TokenKind.AAVAHA)
-    const target = this.eat(TokenKind.IDENTIFIER, 'aavaha').value
+    const target = this.parseNameRef()
     let aagama: TypedField[] = []
     let nirgama: TypedField[] = []
     if (this.tryEat(TokenKind.AAGAMA)) { this.eat(TokenKind.COLON); aagama = this.parseTypedFields() }

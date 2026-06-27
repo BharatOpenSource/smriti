@@ -72,6 +72,7 @@ function itemH(item: FlowItem): number {
   if (item.kind === 'vibhaga') return vibBoxH(item)
   if (item.kind === 'svasti' || item.kind === 'anaapta') return TERM_H
   if (item.kind === 'sthiti')  return TERM_H
+  if (item.kind === 'aavaha')  return TERM_H
   return 0
 }
 
@@ -136,6 +137,7 @@ function renderItem(item: FlowItem, y: number): string {
     case 'svasti':  return terminalBox(y, '✓  Completed', C.ok, C.okText)
     case 'anaapta': return terminalBox(y, '✗  Rejected', C.fail, C.failText)
     case 'sthiti':  return terminalBox(y, `◎  ${item.name}`, '#8E44AD', '#FFFFFF')
+    case 'aavaha':  return terminalBox(y, `⤷  ${nameRefStr(item.target)}`, '#2471A3', '#FFFFFF')
     default:        return ''
   }
 }

@@ -194,7 +194,7 @@ export interface AnugamaDecl extends Node {
 
 export interface AavahaDecl extends Node {
   kind: 'aavaha'
-  target: string
+  target: NameRef
   aagama: TypedField[]
   nirgama: TypedField[]
 }

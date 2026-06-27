@@ -266,8 +266,22 @@ class Checker {
       case 'anaapta':
       case 'sthiti':
       case 'anugama':
-      case 'aavaha':
         return
+      case 'aavaha': {
+        const t = item.target
+        if (typeof t !== 'string') {
+          // qualified aavaha: gov.pan-verification — validate namespace is imported
+          const ns = this.context?.imports.get(t.namespace)
+          if (!ns) {
+            this.fail(
+              `aavaha namespace '${t.namespace}' is not imported — ` +
+              `add: sangama ${t.namespace} { yuja: "./file.smr" }`,
+              item.pos,
+            )
+          }
+        }
+        return
+      }
     }
   }
 
