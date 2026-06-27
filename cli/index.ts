@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parse } from '../src/parser.js'
 import { typecheck } from '../src/typechecker.js'
+import { resolveImports } from '../src/resolver.js'
 import { toYaml } from '../src/backends/yaml.js'
 import { toSvg } from '../src/backends/svg.js'
 
@@ -57,7 +58,10 @@ function run() {
     if (!file) { console.error('Usage: smr check <file>'); process.exit(1) }
     const source = readSource(file)
     try {
-      typecheck(parse(source))
+      const abs = resolve(file)
+      const ast = parse(source)
+      const context = resolveImports(ast, abs)
+      typecheck(ast, context)
       console.log(`✓  ${file}`)
     } catch (e) {
       console.error(String(e))
@@ -73,7 +77,10 @@ function run() {
     const source = readSource(file)
     let ast
     try {
-      ast = typecheck(parse(source))
+      const abs = resolve(file)
+      const parsed = parse(source)
+      const context = resolveImports(parsed, abs)
+      ast = typecheck(parsed, context)
     } catch (e) {
       console.error(String(e))
       process.exit(1)

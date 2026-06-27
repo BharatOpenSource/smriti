@@ -3,6 +3,8 @@ import type {
   FlowDecl, FlowItem, PadaDecl, VibhagaDecl,
   TypedField, SmritiType, Pos,
 } from './ast.js'
+import { nameRefStr } from './ast.js'
+import type { ResolveContext } from './resolver.js'
 
 export class TypecheckError extends Error {
   constructor(message: string, public pos: Pos) {
@@ -13,6 +15,8 @@ export class TypecheckError extends Error {
 // Collects all errors rather than stopping at the first one.
 class Checker {
   errors: TypecheckError[] = []
+
+  constructor(private context?: ResolveContext) {}
 
   fail(message: string, pos: Pos) {
     this.errors.push(new TypecheckError(message, pos))
@@ -120,12 +124,32 @@ class Checker {
 
   private checkPada(pada: PadaDecl, stepNames: Set<string>, participants: Set<string>) {
     this.checkIti(pada.name, pada.itiName, pada.pos)
-    // karta must reference a declared paksha (if participants are declared)
-    if (pada.karta && participants.size > 0 && !participants.has(pada.karta)) {
-      this.fail(
-        `karta '${pada.karta}' is not a declared paksha — declared participants: ${[...participants].join(', ')}`,
-        pada.pos,
-      )
+
+    if (pada.karta !== undefined) {
+      if (typeof pada.karta === 'string') {
+        if (participants.size > 0 && !participants.has(pada.karta)) {
+          this.fail(
+            `karta '${pada.karta}' is not a declared paksha — declared: ${[...participants].join(', ')}`,
+            pada.pos,
+          )
+        }
+      } else {
+        const qn = pada.karta
+        const ns = this.context?.imports.get(qn.namespace)
+        if (!ns) {
+          this.fail(
+            `karta namespace '${qn.namespace}' is not imported — ` +
+            `add: sangama ${qn.namespace} { yuja: "./file.smr" }`,
+            pada.pos,
+          )
+        } else if (!ns.participants.some(p => p.name === qn.name)) {
+          this.fail(
+            `karta '${nameRefStr(qn)}' not found in namespace '${qn.namespace}' — ` +
+            `available: ${ns.participants.map(p => `${ns.namespace}.${p.name}`).join(', ')}`,
+            pada.pos,
+          )
+        }
+      }
     }
 
     // pravritti / prativritti targets must exist
@@ -206,8 +230,8 @@ class Checker {
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-export function typecheck(file: SmritiFile): SmritiFile {
-  const checker = new Checker()
+export function typecheck(file: SmritiFile, context?: ResolveContext): SmritiFile {
+  const checker = new Checker(context)
   checker.checkFile(file)
   if (checker.errors.length > 0) {
     const messages = checker.errors.map(e => e.message).join('\n')

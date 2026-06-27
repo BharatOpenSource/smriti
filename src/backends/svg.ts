@@ -3,6 +3,7 @@
 // terminals as coloured endpoints. No complex graph layout — readable at v0.1.
 
 import type { SmritiDecl, FlowItem, PadaDecl, VibhagaDecl } from '../ast.js'
+import { nameRefStr } from '../ast.js'
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ function renderStep(pada: PadaDecl, y: number): string {
 
   let ty = y + 44
   if (pada.karta) {
-    parts.push(metaLine(BOX_X + 16, ty, `Actor:`, pada.karta))
+    parts.push(metaLine(BOX_X + 16, ty, 'Actor:', nameRefStr(pada.karta)))
     ty += 20
   }
   if (pada.kaarya) {

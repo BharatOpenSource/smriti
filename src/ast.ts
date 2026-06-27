@@ -6,6 +6,19 @@ export interface Pos {
   col: number
 }
 
+// A namespaced reference — namespace comes from the sangama name, member is the local name.
+// e.g. `gov.citizen` → { namespace: 'gov', name: 'citizen' }
+export interface QualifiedName {
+  namespace: string
+  name: string
+}
+
+export type NameRef = string | QualifiedName
+
+export function nameRefStr(ref: NameRef): string {
+  return typeof ref === 'string' ? ref : `${ref.namespace}.${ref.name}`
+}
+
 export interface Node {
   pos: Pos
 }
@@ -120,7 +133,7 @@ export interface PadaDecl extends Node {
   kind: 'pada'
   name: string
   itiName?: string
-  karta?: string
+  karta?: NameRef
   kaarya?: string
   aagama: TypedField[]
   nirgama: TypedField[]

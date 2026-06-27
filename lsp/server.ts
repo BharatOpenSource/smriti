@@ -16,6 +16,8 @@ import { TextDocument } from 'vscode-languageserver-textdocument'
 import { lex, TokenKind } from '../src/lexer.js'
 import { parse } from '../src/parser.js'
 import { typecheck } from '../src/typechecker.js'
+import { resolveImports } from '../src/resolver.js'
+import type { ResolveContext } from '../src/resolver.js'
 
 const connection = createConnection(ProposedFeatures.all)
 const documents = new TextDocuments(TextDocument)
@@ -35,8 +37,23 @@ function validate(doc: TextDocument): Diagnostic[] {
 
   try {
     const ast = parse(source)
+    let context: ResolveContext | undefined
     try {
-      typecheck(ast)
+      // Resolve imports — LSP converts file URI to path for relative resolution.
+      // Fails gracefully if files can't be found (don't crash the server).
+      const filePath = doc.uri.replace(/^file:\/\//, '')
+      context = resolveImports(ast, filePath)
+    } catch (importErr) {
+      const msg = String(importErr).replace(/^Error:\s*/, '')
+      diags.push({
+        severity: DiagnosticSeverity.Warning,
+        range: lineRange(doc, 0),
+        message: `Import resolution: ${msg}`,
+        source: 'smr',
+      })
+    }
+    try {
+      typecheck(ast, context)
     } catch (e) {
       // Typecheck error — may be multi-error string; split and report each
       const msg = String(e).replace(/^Error:\s*/, '')

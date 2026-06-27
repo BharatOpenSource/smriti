@@ -5,6 +5,7 @@ import type {
   SmritiDecl, PakshaDecl, FlowItem, PadaDecl,
   VibhagaDecl, TypedField,
 } from '../ast.js'
+import { nameRefStr } from '../ast.js'
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ function buildStep(
     name: prettify(pada.name),
   }
 
-  if (pada.karta)  step.actor  = pada.karta
+  if (pada.karta)  step.actor  = nameRefStr(pada.karta)
   if (pada.kaarya) step.action = pada.kaarya
 
   if (pada.aagama.length > 0) step.inputs  = fields(pada.aagama)

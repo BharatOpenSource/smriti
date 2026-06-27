@@ -51,6 +51,7 @@ export const enum TokenKind {
   LPAREN = '(', RPAREN = ')',
   LBRACKET = '[', RBRACKET = ']',
   COLON = ':', COMMA = ',',
+  DOT = '.',
   ARROW = '→',
 
   EOF = 'eof',
@@ -101,6 +102,7 @@ const PUNCTUATION: Record<string, TokenKind> = {
   '(': TokenKind.LPAREN,   ')': TokenKind.RPAREN,
   '[': TokenKind.LBRACKET, ']': TokenKind.RBRACKET,
   ':': TokenKind.COLON,    ',': TokenKind.COMMA,
+  '.': TokenKind.DOT,
   '→': TokenKind.ARROW,
 }
 

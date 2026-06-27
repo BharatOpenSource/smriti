@@ -8,6 +8,7 @@ import type {
   AavahaDecl, SthitiDecl, TypedField, SmritiType,
   Expression, TarkaLiteral, IdentifierExpr,
   PravrttiDecl, PrativrttiDecl, Pos,
+  NameRef,
 } from './ast.js'
 
 export class ParseError extends Error {
@@ -46,6 +47,16 @@ class Parser {
   private tryEat(kind: TokenKind): Token | null {
     if (this.check(kind)) return this.advance()
     return null
+  }
+
+  // Parses `identifier` or `namespace.member` — used wherever an entity reference can be qualified.
+  private parseNameRef(): NameRef {
+    const first = this.eat(TokenKind.IDENTIFIER).value
+    if (this.tryEat(TokenKind.DOT)) {
+      const member = this.eat(TokenKind.IDENTIFIER, 'qualified name').value
+      return { namespace: first, name: member }
+    }
+    return first
   }
 
   // Parses optional `iti <name>` after a closing brace. Returns the name or undefined.
@@ -281,7 +292,7 @@ class Parser {
     const name = this.eat(TokenKind.IDENTIFIER, 'pada').value
     this.eat(TokenKind.LBRACE, `pada '${name}'`)
 
-    let karta: string | undefined
+    let karta: NameRef | undefined
     let kaarya: string | undefined
     let aagama: TypedField[] = []
     let nirgama: TypedField[] = []
@@ -291,7 +302,7 @@ class Parser {
 
     while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
       if (this.tryEat(TokenKind.KARTA)) {
-        this.eat(TokenKind.COLON); karta = this.eat(TokenKind.IDENTIFIER).value
+        this.eat(TokenKind.COLON); karta = this.parseNameRef()
       } else if (this.tryEat(TokenKind.KAARYA)) {
         this.eat(TokenKind.COLON); kaarya = this.eat(TokenKind.STRING).value
       } else if (this.tryEat(TokenKind.AAGAMA)) {
