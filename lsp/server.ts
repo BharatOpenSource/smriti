@@ -159,6 +159,7 @@ const KEYWORD_DOCS: Partial<Record<TokenKind, string>> = {
   [TokenKind.PRATIVRITTI]:'**prativritti** (प्रतिवृत्ति) — Loop back to a previous step.',
   [TokenKind.SVASTI]:     '**svasti** (स्वस्ति) — Success terminal: process ends here successfully.',
   [TokenKind.ANAAPTA]:    '**anaapta** (अनाप्त) — Failure terminal: process ends here rejected or failed.',
+  [TokenKind.VIPARYAYA]:  '**viparyaya** (विपर्यय) — Per-step failure path. `viparyaya → step-name` routes to a named error-handler step if this step fails. Each step can have its own failure path.',
   [TokenKind.VIBHAGA]:    '**vibhaga** (विभाग) — Branching point: multiple exclusive paths from one condition.',
   [TokenKind.NIYAMA]:     '**niyama** (नियम) — Condition evaluated at a branch point.',
   [TokenKind.ANUBHAGA]:   '**anubhaga** (अनुभाग) — Parallel split: launch concurrent tracks.',

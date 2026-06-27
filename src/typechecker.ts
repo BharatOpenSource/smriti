@@ -303,6 +303,17 @@ class Checker {
       }
     }
 
+    // viparyaya: per-step failure target must exist in the flow
+    if (pada.viparyaya !== undefined) {
+      const vt = pada.viparyaya
+      if (vt !== 'svasti' && vt !== 'anaapta' && !stepNames.has(vt)) {
+        this.fail(
+          `viparyaya target '${vt}' does not exist in this pravah`,
+          pada.pos,
+        )
+      }
+    }
+
     // pravritti / prativritti targets must exist
     if (pada.routing) {
       const target = pada.routing.target

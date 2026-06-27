@@ -306,6 +306,7 @@ class Parser {
     let nirgama: TypedField[] = []
     let samaya: Duration | undefined
     let khanda: Expression | undefined
+    let viparyaya: string | undefined
     let routing: PravrttiDecl | PrativrttiDecl | undefined
 
     while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
@@ -321,6 +322,14 @@ class Parser {
         this.eat(TokenKind.COLON); samaya = this.parseDuration()
       } else if (this.tryEat(TokenKind.KHANDA)) {
         this.eat(TokenKind.COLON); khanda = this.parseExpression()
+      } else if (this.tryEat(TokenKind.VIPARYAYA)) {
+        this.eat(TokenKind.ARROW)
+        const vt = this.peek()
+        if (vt.kind === TokenKind.SVASTI || vt.kind === TokenKind.ANAAPTA) {
+          viparyaya = this.advance().value
+        } else {
+          viparyaya = this.eat(TokenKind.IDENTIFIER, 'viparyaya target').value
+        }
       } else if (this.check(TokenKind.PRAVRITTI)) {
         const p = this.pos(); this.advance(); this.eat(TokenKind.COLON)
         routing = { kind: 'pravritti', target: this.eat(TokenKind.IDENTIFIER).value, pos: p }
@@ -332,7 +341,7 @@ class Parser {
 
     this.eat(TokenKind.RBRACE, `pada '${name}'`)
     const itiName = this.tryEatIti()
-    return { kind: 'pada', name, itiName, karta, kaarya, aagama, nirgama, samaya, khanda, routing, pos }
+    return { kind: 'pada', name, itiName, karta, kaarya, aagama, nirgama, samaya, khanda, viparyaya, routing, pos }
   }
 
   private parseDuration(): Duration {

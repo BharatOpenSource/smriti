@@ -56,9 +56,9 @@
     },
 
     "keyword-terminal": {
-      "comment": "Terminal outcome keywords — end states of a process",
+      "comment": "Terminal outcome keywords and per-step failure routing",
       "name": "support.function.smriti",
-      "match": "\\b(svasti|anaapta|sthiti)\\b"
+      "match": "\\b(svasti|anaapta|sthiti|viparyaya)\\b"
     },
 
     "arrow": {

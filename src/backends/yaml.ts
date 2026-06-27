@@ -126,6 +126,10 @@ function buildStep(
     step.sla = `${pada.samaya.value} ${pada.samaya.unit}`
   }
 
+  if (pada.viparyaya !== undefined) {
+    step.on_error = pada.viparyaya
+  }
+
   if (pada.khanda) {
     step.precondition = exprStr(pada.khanda)
   }

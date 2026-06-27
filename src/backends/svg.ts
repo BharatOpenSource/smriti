@@ -82,6 +82,7 @@ function stepBoxH(pada: PadaDecl): number {
   if (pada.aagama.length > 0)   lines += 1
   if (pada.nirgama.length > 0)  lines += 1
   if (pada.samaya)              lines += 1
+  if (pada.viparyaya)           lines += 1
   return Math.max(STEP_H, lines * 20 + 24)
 }
 
@@ -169,6 +170,10 @@ function renderStep(pada: PadaDecl, y: number): string {
   }
   if (pada.samaya) {
     parts.push(metaLine(BOX_X + 16, ty, 'SLA:', `${pada.samaya.value} ${pada.samaya.unit}`))
+    ty += 20
+  }
+  if (pada.viparyaya) {
+    parts.push(metaLine(BOX_X + 16, ty, '⚠ fail →', pada.viparyaya))
   }
 
   return parts.join('\n')
