@@ -303,29 +303,29 @@ class Checker {
       }
     }
 
-    // viparyaya: per-step failure target must exist in the flow
-    if (pada.viparyaya !== undefined) {
-      const vt = pada.viparyaya
+    // apavaada: per-step failure target must exist in the flow
+    if (pada.apavaada !== undefined) {
+      const vt = pada.apavaada
       if (vt !== 'svasti' && vt !== 'anaapta' && !stepNames.has(vt)) {
         this.fail(
-          `viparyaya target '${vt}' does not exist in this pravah`,
+          `apavaada target '${vt}' does not exist in this pravah`,
           pada.pos,
         )
       }
     }
 
-    // kalaatigata: SLA timeout routing requires samaya on the same step
-    if (pada.kalaatigata !== undefined) {
+    // samapti: SLA timeout routing requires samaya on the same step
+    if (pada.samapti !== undefined) {
       if (!pada.samaya) {
         this.fail(
-          `kalaatigata declared on '${pada.name}' but no samaya (SLA) is set — timeout routing requires a time limit`,
+          `samapti declared on '${pada.name}' but no samaya (SLA) is set — timeout routing requires a time limit`,
           pada.pos,
         )
       }
-      const kt = pada.kalaatigata
+      const kt = pada.samapti
       if (kt !== 'svasti' && kt !== 'anaapta' && !stepNames.has(kt)) {
         this.fail(
-          `kalaatigata target '${kt}' does not exist in this pravah`,
+          `samapti target '${kt}' does not exist in this pravah`,
           pada.pos,
         )
       }

@@ -306,8 +306,8 @@ class Parser {
     let nirgama: TypedField[] = []
     let samaya: Duration | undefined
     let khanda: Expression | undefined
-    let viparyaya: string | undefined
-    let kalaatigata: string | undefined
+    let apavaada: string | undefined
+    let samapti: string | undefined
     let routing: PravrttiDecl | PrativrttiDecl | undefined
 
     while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
@@ -323,21 +323,21 @@ class Parser {
         this.eat(TokenKind.COLON); samaya = this.parseDuration()
       } else if (this.tryEat(TokenKind.KHANDA)) {
         this.eat(TokenKind.COLON); khanda = this.parseExpression()
-      } else if (this.tryEat(TokenKind.VIPARYAYA)) {
+      } else if (this.tryEat(TokenKind.APAVAADA)) {
         this.eat(TokenKind.ARROW)
         const vt = this.peek()
         if (vt.kind === TokenKind.SVASTI || vt.kind === TokenKind.ANAAPTA) {
-          viparyaya = this.advance().value
+          apavaada = this.advance().value
         } else {
-          viparyaya = this.eat(TokenKind.IDENTIFIER, 'viparyaya target').value
+          apavaada = this.eat(TokenKind.IDENTIFIER, 'apavaada target').value
         }
-      } else if (this.tryEat(TokenKind.KALAATIGATA)) {
+      } else if (this.tryEat(TokenKind.SAMAPTI)) {
         this.eat(TokenKind.ARROW)
         const kt = this.peek()
         if (kt.kind === TokenKind.SVASTI || kt.kind === TokenKind.ANAAPTA) {
-          kalaatigata = this.advance().value
+          samapti = this.advance().value
         } else {
-          kalaatigata = this.eat(TokenKind.IDENTIFIER, 'kalaatigata target').value
+          samapti = this.eat(TokenKind.IDENTIFIER, 'samapti target').value
         }
       } else if (this.check(TokenKind.PRAVRITTI)) {
         const p = this.pos(); this.advance(); this.eat(TokenKind.COLON)
@@ -350,7 +350,7 @@ class Parser {
 
     this.eat(TokenKind.RBRACE, `pada '${name}'`)
     const itiName = this.tryEatIti()
-    return { kind: 'pada', name, itiName, karta, kaarya, aagama, nirgama, samaya, khanda, viparyaya, kalaatigata, routing, pos }
+    return { kind: 'pada', name, itiName, karta, kaarya, aagama, nirgama, samaya, khanda, apavaada, samapti, routing, pos }
   }
 
   private parseDuration(): Duration {

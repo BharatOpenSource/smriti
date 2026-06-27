@@ -33,7 +33,7 @@ smriti passport-renewal {
       nirgama: fee-amount (sankhya), payment-status (vakya)
       khanda: application-id != ""
       samaya: 3 antara
-      viparyaya → payment-failed
+      apavaada → payment-failed
     }
 
     pada verify {
@@ -42,24 +42,24 @@ smriti passport-renewal {
       aagama: application-id (vakya), fee-amount (sankhya)
       nirgama: score (sankhya), verified (tarka)
       samaya: 14 antara
-      viparyaya   → verification-failed
-      kalaatigata → escalate-to-supervisor
+      apavaada   → verification-failed
+      samapti → escalate-to-supervisor
     }
 
     pada escalate-to-supervisor {
       karta: passport-office
       kaarya: "Escalate overdue application to senior officer"
-      viparyaya → anaapta
+      apavaada → anaapta
     }
 
     pada payment-failed {
       kaarya: "Notify applicant of payment failure and cancel application"
-      viparyaya → anaapta
+      apavaada → anaapta
     }
 
     pada verification-failed {
       kaarya: "Log verification failure and notify applicant"
-      viparyaya → anaapta
+      apavaada → anaapta
     }
 
     vibhaga verified {

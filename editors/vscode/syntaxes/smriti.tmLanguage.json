@@ -58,7 +58,7 @@
     "keyword-terminal": {
       "comment": "Terminal outcome keywords, failure routing, and timeout routing",
       "name": "support.function.smriti",
-      "match": "\\b(svasti|anaapta|sthiti|viparyaya|kalaatigata)\\b"
+      "match": "\\b(svasti|anaapta|sthiti|apavaada|samapti)\\b"
     },
 
     "arrow": {

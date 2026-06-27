@@ -141,8 +141,8 @@ export interface PadaDecl extends Node {
   nirgama: TypedField[]
   samaya?: Duration
   khanda?: Expression
-  viparyaya?: string              // on failure: route to this step
-  kalaatigata?: string            // on SLA timeout: route to this step (requires samaya)
+  apavaada?: string               // on failure: route to this step
+  samapti?: string                // on SLA timeout: route to this step (requires samaya)
   routing?: PravrttiDecl | PrativrttiDecl
 }
 

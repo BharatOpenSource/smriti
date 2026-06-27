@@ -17,7 +17,7 @@ smriti test {
     pada submit {
       kaarya: "Submit application"
       nirgama: application-id (vakya)
-      viparyaya → submit-failed
+      apavaada → submit-failed
     }
     pada submit-failed {
       kaarya: "Log submission failure and notify applicant"
@@ -33,14 +33,14 @@ smriti test {
   pravah {
     pada step-a {
       nirgama: result (tarka)
-      viparyaya → error-a
+      apavaada → error-a
     }
     pada step-b {
       aagama: result (tarka)
-      viparyaya → error-b
+      apavaada → error-b
     }
-    pada error-a { kaarya: "Handle A failure" viparyaya → anaapta }
-    pada error-b { kaarya: "Handle B failure" viparyaya → anaapta }
+    pada error-a { kaarya: "Handle A failure" apavaada → anaapta }
+    pada error-b { kaarya: "Handle B failure" apavaada → anaapta }
     vibhaga result {
       niyama satya    → svasti
       niyama asatya   → anaapta
@@ -54,36 +54,36 @@ smriti test {
 
 // ─── Parser ───────────────────────────────────────────────────────────────────
 
-describe('viparyaya — parser', () => {
-  it('parses viparyaya → target on a pada', () => {
+describe('apavaada — parser', () => {
+  it('parses apavaada → target on a pada', () => {
     const pada = steps(WITH_HANDLER)[0]
-    expect(pada.viparyaya).toBe('submit-failed')
+    expect(pada.apavaada).toBe('submit-failed')
   })
 
-  it('leaves viparyaya undefined when not declared', () => {
+  it('leaves apavaada undefined when not declared', () => {
     const src = `smriti t { pravah { pada s { kaarya: "x" } svasti } }`
     const pada = steps(src)[0]
-    expect(pada.viparyaya).toBeUndefined()
+    expect(pada.apavaada).toBeUndefined()
   })
 
-  it('parses chained handlers — multiple steps each with viparyaya', () => {
+  it('parses chained handlers — multiple steps each with apavaada', () => {
     const padas = steps(CHAIN_HANDLERS)
-    expect(padas[0].viparyaya).toBe('error-a')
-    expect(padas[1].viparyaya).toBe('error-b')
+    expect(padas[0].apavaada).toBe('error-a')
+    expect(padas[1].apavaada).toBe('error-b')
   })
 })
 
 // ─── Typechecker ──────────────────────────────────────────────────────────────
 
-describe('viparyaya — typechecker', () => {
-  it('accepts viparyaya to a declared step', () => {
+describe('apavaada — typechecker', () => {
+  it('accepts apavaada to a declared step', () => {
     expect(() => check(WITH_HANDLER)).not.toThrow()
   })
 
-  it('accepts viparyaya → anaapta (terminal is a valid target)', () => {
+  it('accepts apavaada → anaapta (terminal is a valid target)', () => {
     const src = `
 smriti t { pravah {
-  pada s { viparyaya → anaapta }
+  pada s { apavaada → anaapta }
   svasti
   anaapta
 } }
@@ -91,14 +91,14 @@ smriti t { pravah {
     expect(() => check(src)).not.toThrow()
   })
 
-  it('accepts viparyaya → svasti (unusual but valid)', () => {
-    const src = `smriti t { pravah { pada s { viparyaya → svasti } svasti } }`
+  it('accepts apavaada → svasti (unusual but valid)', () => {
+    const src = `smriti t { pravah { pada s { apavaada → svasti } svasti } }`
     expect(() => check(src)).not.toThrow()
   })
 
-  it('rejects viparyaya to a step that does not exist', () => {
-    const src = `smriti t { pravah { pada s { viparyaya → ghost } svasti } }`
-    expect(() => check(src)).toThrow(/viparyaya target 'ghost' does not exist/)
+  it('rejects apavaada to a step that does not exist', () => {
+    const src = `smriti t { pravah { pada s { apavaada → ghost } svasti } }`
+    expect(() => check(src)).toThrow(/apavaada target 'ghost' does not exist/)
   })
 
   it('allows chained handler network — each step has its own failure path', () => {
@@ -108,26 +108,26 @@ smriti t { pravah {
 
 // ─── YAML backend ─────────────────────────────────────────────────────────────
 
-describe('viparyaya — yaml backend', () => {
+describe('apavaada — yaml backend', () => {
   it('emits on_error field in the step', () => {
     const yaml = toYaml(decl(WITH_HANDLER))
     expect(yaml).toContain('on_error: submit-failed')
   })
 
-  it('does not emit on_error when viparyaya is absent', () => {
+  it('does not emit on_error when apavaada is absent', () => {
     const src = `smriti t { pravah { pada s { kaarya: "x" } svasti } }`
     expect(toYaml(decl(src))).not.toContain('on_error')
   })
 
   it('on_error → anaapta is emitted literally', () => {
-    const src = `smriti t { pravah { pada s { viparyaya → anaapta } svasti anaapta } }`
+    const src = `smriti t { pravah { pada s { apavaada → anaapta } svasti anaapta } }`
     expect(toYaml(decl(src))).toContain('on_error: anaapta')
   })
 })
 
 // ─── SVG backend ─────────────────────────────────────────────────────────────
 
-describe('viparyaya — svg backend', () => {
+describe('apavaada — svg backend', () => {
   it('includes failure route label in SVG output', () => {
     const svg = toSvg(decl(WITH_HANDLER))
     expect(svg).toContain('submit-failed')

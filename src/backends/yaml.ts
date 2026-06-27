@@ -126,12 +126,12 @@ function buildStep(
     step.sla = `${pada.samaya.value} ${pada.samaya.unit}`
   }
 
-  if (pada.viparyaya !== undefined) {
-    step.on_error = pada.viparyaya
+  if (pada.apavaada !== undefined) {
+    step.on_error = pada.apavaada
   }
 
-  if (pada.kalaatigata !== undefined) {
-    step.on_timeout = pada.kalaatigata
+  if (pada.samapti !== undefined) {
+    step.on_timeout = pada.samapti
   }
 
   if (pada.khanda) {

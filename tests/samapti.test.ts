@@ -17,11 +17,11 @@ smriti test {
     pada verify {
       kaarya: "Verify documents"
       samaya: 14 antara
-      kalaatigata → escalate
+      samapti → escalate
     }
     pada escalate {
       kaarya: "Escalate to supervisor"
-      viparyaya → anaapta
+      apavaada → anaapta
     }
     svasti
     anaapta
@@ -35,8 +35,8 @@ smriti test {
     pada process {
       kaarya: "Process application"
       samaya: 7 antara
-      viparyaya → process-failed
-      kalaatigata → process-timed-out
+      apavaada → process-failed
+      samapti  → process-timed-out
     }
     pada process-failed    { kaarya: "Log failure" }
     pada process-timed-out { kaarya: "Notify SLA breach and escalate" }
@@ -48,65 +48,65 @@ smriti test {
 
 // ─── Parser ───────────────────────────────────────────────────────────────────
 
-describe('kalaatigata — parser', () => {
-  it('parses kalaatigata → target on a pada', () => {
+describe('samapti — parser', () => {
+  it('parses samapti → target on a pada', () => {
     const pada = steps(WITH_TIMEOUT)[0]
-    expect(pada.kalaatigata).toBe('escalate')
+    expect(pada.samapti).toBe('escalate')
   })
 
-  it('leaves kalaatigata undefined when not declared', () => {
+  it('leaves samapti undefined when not declared', () => {
     const src = `smriti t { pravah { pada s { kaarya: "x" } svasti } }`
-    expect(steps(src)[0].kalaatigata).toBeUndefined()
+    expect(steps(src)[0].samapti).toBeUndefined()
   })
 
-  it('parses both viparyaya and kalaatigata on the same step', () => {
+  it('parses both apavaada and samapti on the same step', () => {
     const pada = steps(BOTH_PATHS)[0]
-    expect(pada.viparyaya).toBe('process-failed')
-    expect(pada.kalaatigata).toBe('process-timed-out')
+    expect(pada.apavaada).toBe('process-failed')
+    expect(pada.samapti).toBe('process-timed-out')
   })
 
-  it('accepts kalaatigata → anaapta (terminal target)', () => {
-    const src = `smriti t { pravah { pada s { samaya: 1 antara kalaatigata → anaapta } svasti anaapta } }`
+  it('accepts samapti → anaapta (terminal target)', () => {
+    const src = `smriti t { pravah { pada s { samaya: 1 antara samapti → anaapta } svasti anaapta } }`
     const pada = steps(src)[0]
-    expect(pada.kalaatigata).toBe('anaapta')
+    expect(pada.samapti).toBe('anaapta')
   })
 })
 
 // ─── Typechecker ──────────────────────────────────────────────────────────────
 
-describe('kalaatigata — typechecker', () => {
-  it('accepts kalaatigata with samaya declared', () => {
+describe('samapti — typechecker', () => {
+  it('accepts samapti with samaya declared', () => {
     expect(() => check(WITH_TIMEOUT)).not.toThrow()
   })
 
-  it('rejects kalaatigata without samaya — timeout routing requires a time limit', () => {
-    const src = `smriti t { pravah { pada s { kalaatigata → escalate } pada escalate { kaarya: "x" } svasti } }`
+  it('rejects samapti without samaya — timeout routing requires a time limit', () => {
+    const src = `smriti t { pravah { pada s { samapti → escalate } pada escalate { kaarya: "x" } svasti } }`
     expect(() => check(src)).toThrow(/no samaya \(SLA\) is set/)
   })
 
-  it('rejects kalaatigata target that does not exist in the flow', () => {
-    const src = `smriti t { pravah { pada s { samaya: 1 antara kalaatigata → ghost } svasti } }`
-    expect(() => check(src)).toThrow(/kalaatigata target 'ghost' does not exist/)
+  it('rejects samapti target that does not exist in the flow', () => {
+    const src = `smriti t { pravah { pada s { samaya: 1 antara samapti → ghost } svasti } }`
+    expect(() => check(src)).toThrow(/samapti target 'ghost' does not exist/)
   })
 
-  it('accepts kalaatigata → svasti', () => {
-    const src = `smriti t { pravah { pada s { samaya: 1 antara kalaatigata → svasti } svasti } }`
+  it('accepts samapti → svasti', () => {
+    const src = `smriti t { pravah { pada s { samaya: 1 antara samapti → svasti } svasti } }`
     expect(() => check(src)).not.toThrow()
   })
 
-  it('accepts both viparyaya and kalaatigata on the same step', () => {
+  it('accepts both apavaada and samapti on the same step', () => {
     expect(() => check(BOTH_PATHS)).not.toThrow()
   })
 })
 
 // ─── YAML backend ─────────────────────────────────────────────────────────────
 
-describe('kalaatigata — yaml backend', () => {
+describe('samapti — yaml backend', () => {
   it('emits on_timeout field on the step', () => {
     expect(toYaml(decl(WITH_TIMEOUT))).toContain('on_timeout: escalate')
   })
 
-  it('does not emit on_timeout when kalaatigata is absent', () => {
+  it('does not emit on_timeout when samapti is absent', () => {
     const src = `smriti t { pravah { pada s { kaarya: "x" } svasti } }`
     expect(toYaml(decl(src))).not.toContain('on_timeout')
   })
@@ -120,7 +120,7 @@ describe('kalaatigata — yaml backend', () => {
 
 // ─── SVG backend ─────────────────────────────────────────────────────────────
 
-describe('kalaatigata — svg backend', () => {
+describe('samapti — svg backend', () => {
   it('shows timeout route in SVG output', () => {
     const svg = toSvg(decl(WITH_TIMEOUT))
     expect(svg).toContain('escalate')
