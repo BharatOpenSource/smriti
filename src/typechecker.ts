@@ -137,7 +137,10 @@ class Checker {
 
   // ─── Flow ──────────────────────────────────────────────────────────────────
 
-  private checkFlow(flow: FlowDecl, participants: Set<string>, externalInputs?: Map<string, SmritiType>) {
+  // isParallelTrack: when true (anubhaga inner track), skip terminal check and data flow.
+  // Terminal semantics don't apply to tracks — they exit via anugama.
+  // Data flow is handled by the outer checkDataFlow with full outer context.
+  private checkFlow(flow: FlowDecl, participants: Set<string>, externalInputs?: Map<string, SmritiType>, isParallelTrack = false) {
     const stepNames = this.collectStepNames(flow)
     this.checkStepUniqueness(flow)
 
@@ -145,21 +148,23 @@ class Checker {
       this.checkFlowItem(item, stepNames, participants)
     }
 
-    // A non-empty flow must reach a terminal (svasti or anaapta) on every path.
-    // Full path analysis is deferred — warn if no terminal exists at all.
-    const hasTerminal = flow.items.some(
-      i => i.kind === 'svasti' || i.kind === 'anaapta' ||
-           i.kind === 'vibhaga'
-    )
-    if (flow.items.length > 0 && !hasTerminal) {
-      this.fail(
-        'pravah has no terminal (svasti or anaapta) and no vibhaga routing',
-        flow.pos,
+    if (!isParallelTrack) {
+      // A non-empty flow must reach a terminal (svasti or anaapta) on every path.
+      // Full path analysis is deferred — warn if no terminal exists at all.
+      const hasTerminal = flow.items.some(
+        i => i.kind === 'svasti' || i.kind === 'anaapta' ||
+             i.kind === 'vibhaga'
       )
-    }
+      if (flow.items.length > 0 && !hasTerminal) {
+        this.fail(
+          'pravah has no terminal (svasti or anaapta) and no vibhaga routing',
+          flow.pos,
+        )
+      }
 
-    // Data flow: validate aagama/nirgama connections and vibhaga field references.
-    this.checkDataFlow(flow.items, externalInputs)
+      // Data flow: validate aagama/nirgama connections and vibhaga field references.
+      this.checkDataFlow(flow.items, externalInputs)
+    }
   }
 
   // ─── Data flow ─────────────────────────────────────────────────────────────
@@ -222,17 +227,24 @@ class Checker {
       }
 
       if (item.kind === 'anubhaga') {
-        for (const track of item.tracks) this.checkDataFlow(track)
+        // Pass outer produced context so tracks can consume fields from steps before the split.
+        for (const track of item.tracks) this.checkDataFlow(track, produced)
       }
     }
   }
 
   private collectStepNames(flow: FlowDecl): Set<string> {
     const names = new Set<string>()
-    for (const item of flow.items) {
-      if (item.kind === 'pada') names.add(item.name)
-      if (item.kind === 'sthiti') names.add(item.name)
+    const collect = (items: FlowItem[]) => {
+      for (const item of items) {
+        if (item.kind === 'pada')    names.add(item.name)
+        if (item.kind === 'sthiti') names.add(item.name)
+        if (item.kind === 'anubhaga') {
+          for (const track of item.tracks) collect(track)
+        }
+      }
     }
+    collect(flow.items)
     return names
   }
 
@@ -258,17 +270,30 @@ class Checker {
       case 'anubhaga': {
         for (const track of item.tracks) {
           const inner = { kind: 'pravah' as const, items: track, pos: item.pos }
-          this.checkFlow(inner, participants)
+          // isParallelTrack=true: skip terminal check and data flow (handled by outer checkDataFlow with context)
+          this.checkFlow(inner, participants, undefined, true)
         }
         return
       }
       case 'svasti':
       case 'anaapta':
       case 'sthiti':
-      case 'anugama':
         return
+      case 'anugama': {
+        for (const name of item.tracks) {
+          if (!stepNames.has(name)) {
+            this.fail(
+              `anugama references '${name}' which is not a step in any parallel track — ` +
+              `check that '${name}' is a pada declared inside an anubhaga block`,
+              item.pos,
+            )
+          }
+        }
+        return
+      }
       case 'aavaha': {
         const t = item.target
+        // bare name (e.g. aavaha payment-gateway) is an external service reference — not validated against local steps
         if (typeof t !== 'string') {
           // qualified aavaha: gov.pan-verification — validate namespace is imported
           const ns = this.context?.imports.get(t.namespace)
