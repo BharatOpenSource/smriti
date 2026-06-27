@@ -31,19 +31,27 @@ const C = {
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 export function toSvg(decl: SmritiDecl): string {
-  const items = decl.flow.items
+  const items = decl.flow?.items ?? []
 
   // Calculate total canvas height
   let totalH = 20 + HDR_H + ARROW
   for (const item of items) totalH += itemH(item) + ARROW + GAP
+  if (items.length === 0) totalH += 60  // room for "declaration only" note
   totalH += 40
 
   const parts: string[] = [header(totalH)]
   let y = 20
 
-  // Process header box
   parts.push(headerBox(decl, y))
   y += HDR_H
+
+  if (items.length === 0) {
+    // Declaration-only smriti — show participants if present, note no flow
+    const note = decl.participants.length > 0
+      ? `${decl.participants.length} participant${decl.participants.length > 1 ? 's' : ''} declared · no pravah`
+      : 'declaration only · no pravah'
+    parts.push(text(CX, y + ARROW + 20, note, C.meta, 13))
+  }
 
   for (const item of items) {
     parts.push(arrowLine(CX, y, y + ARROW))

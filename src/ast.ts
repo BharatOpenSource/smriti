@@ -25,7 +25,7 @@ export interface SmritiDecl extends Node {
   references: ReferenceDecl[]
   participants: PakshaDecl[]
   trigger?: GhatanaDecl
-  flow: FlowDecl
+  flow?: FlowDecl       // optional — smriti can be declaration-only
 }
 
 export interface SutraDecl extends Node {

@@ -29,7 +29,7 @@ class Checker {
     this.checkIti(decl.name, decl.itiName, decl.pos)
     const participantNames = new Set(decl.participants.map(p => p.name))
     for (const p of decl.participants) this.checkIti(p.name, p.itiName, p.pos)
-    this.checkFlow(decl.flow, participantNames)
+    if (decl.flow) this.checkFlow(decl.flow, participantNames)
   }
 
   private checkSutra(decl: SutraDecl) {

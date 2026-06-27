@@ -17,13 +17,6 @@ export function toYaml(decl: SmritiDecl): string {
 function buildProcess(decl: SmritiDecl): object {
   const meta = decl.metadata
 
-  // Index all vibhaga declarations by what they branch on,
-  // so steps can look up their conditions.
-  const vibhagaByOn = new Map<string, VibhagaDecl>()
-  for (const item of decl.flow.items) {
-    if (item.kind === 'vibhaga') vibhagaByOn.set(item.on, item)
-  }
-
   const process: Record<string, unknown> = {
     id: decl.name,
     name: prettify(decl.name),
@@ -38,11 +31,11 @@ function buildProcess(decl: SmritiDecl): object {
     }
   }
 
-  if (meta.stara)         process.visibility       = meta.stara
+  if (meta.stara)          process.visibility       = meta.stara
   if (meta.avadhi != null) process.change_lock_days = meta.avadhi
-  if (meta.sthala)        process.jurisdiction     = meta.sthala
-  if (meta.kshetra)       process.region           = meta.kshetra
-  if (meta.prabhaava)     process.effective_date   = meta.prabhaava
+  if (meta.sthala)         process.jurisdiction     = meta.sthala
+  if (meta.kshetra)        process.region           = meta.kshetra
+  if (meta.prabhaava)      process.effective_date   = meta.prabhaava
 
   if (decl.participants.length > 0)
     process.parties = decl.participants.map(buildParty)
@@ -50,7 +43,14 @@ function buildProcess(decl: SmritiDecl): object {
   const rights = buildRights(decl.participants)
   if (rights.length > 0) process.rights = rights
 
-  process.steps = buildSteps(decl.flow.items, vibhagaByOn)
+  if (decl.flow) {
+    // Index vibhaga by what they branch on so steps can embed their conditions.
+    const vibhagaByOn = new Map<string, VibhagaDecl>()
+    for (const item of decl.flow.items) {
+      if (item.kind === 'vibhaga') vibhagaByOn.set(item.on, item)
+    }
+    process.steps = buildSteps(decl.flow.items, vibhagaByOn)
+  }
 
   return process
 }

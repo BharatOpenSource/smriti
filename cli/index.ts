@@ -81,11 +81,15 @@ function run() {
 
     const decl = ast.decls[0]
     if (!decl) { console.error('smr: no declarations found'); process.exit(1) }
-    if (decl.kind !== 'smriti') { console.error('smr: expected a smriti declaration'); process.exit(1) }
+    if (decl.kind !== 'smriti') { console.error('smr: sutra files compile to .sut — use a smriti file'); process.exit(1) }
 
     if (flags.has('--svg')) {
       output(toSvg(decl))
     } else {
+      if (!decl.flow) {
+        console.error('smr: this smriti has no pravah — YAML output requires a flow. Use --svg for a declaration diagram.')
+        process.exit(1)
+      }
       output(toYaml(decl))
     }
     return

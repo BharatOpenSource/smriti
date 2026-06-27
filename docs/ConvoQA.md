@@ -168,6 +168,19 @@ This is architectural coherence from first principles, not coincidence.
 - `{}` retained for structural grouping — removing them hurts parser error recovery and editor tooling.
 - Pāṇinian philosophy (anuvṛtti = rule inheritance) to influence **semantics**: sutra inheritance, field propagation — not syntax.
 
+### Smriti as general formal description language — decided 2026-06-27
+
+**Decision:** Smriti is a general formal description language, not a process-only language.
+
+- `smriti` = a named, formal description of any structured thing. **What it contains determines what it is.**
+- `pravah` (process flow) is the primary use case and remains the main target for tooling and backends.
+- `pravah` is **optional**. A `smriti` without `pravah` is valid — it may declare participants, metadata, references, or rules only.
+- Future body types (layout, schema, ruleset) extend the language without breaking existing files.
+- Backends determine how they interpret the content — a declaration-only `.smr` renders as an entity diagram in SVG, is invalid for YAML (which requires a flow), and so on.
+- Cross-file composition via `sangama`: one `.smr` can reference another for shared participant declarations, type libraries, or rule sets. Resolver not yet implemented — logged as open item.
+
+**What this is not:** a general-purpose programming language. Smriti describes structure, rules, and processes. Computation lives in the expression layer (future).
+
 ### Semantics — in progress 2026-06-27
 
 Current implementation covers: metadata, sequential steps, binary/trivalent branching, parallel tracks, sub-process invocation, typed field declarations.
@@ -183,6 +196,7 @@ Current implementation covers: metadata, sequential steps, binary/trivalent bran
 
 ## Open Questions / Tasks
 
-- [ ] Semantics design: expression language, data flow, constraints, error paths (in progress)
+- [ ] Cross-file resolution: `sangama` file loader — resolve and validate referenced `.smr` files at compile time
+- [ ] Semantics: expression language, formal data flow, per-step error paths, samaya escalation
 - [ ] Indic script rendering: canonical display script (Devanagari recommended)
 - [ ] Tree-sitter grammar for highlighting (after LSP stable)

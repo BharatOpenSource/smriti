@@ -81,7 +81,7 @@ class Parser {
     const references = this.parseReferences()
     const participants = this.parseParticipants()
     const trigger = this.check(TokenKind.GHATANA) ? this.parseGhatana() : undefined
-    const flow = this.parseFlow()
+    const flow = this.check(TokenKind.PRAVAH) ? this.parseFlow() : undefined
 
     this.eat(TokenKind.RBRACE, `smriti '${name}'`)
     const itiName = this.tryEatIti()

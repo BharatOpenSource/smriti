@@ -124,6 +124,26 @@ describe('parser', () => {
     expect((requestInfo.routing as any)?.target).toBe('submit')
   })
 
+  it('parses a declaration-only smriti with no pravah', () => {
+    const src = `
+smriti gov-india-participants {
+  adhipati: "Government of India"
+  paksha citizen      { bhumika: individual  adhikara: apply }
+  paksha mea          { bhumika: ministry    adhikara: approve }
+  paksha uidai        { bhumika: authority   adhikara: verify }
+}
+`
+    const ast = parse(src)
+    expect(ast.decls.length).toBe(1)
+    const decl = ast.decls[0]
+    expect(decl.kind).toBe('smriti')
+    if (decl.kind !== 'smriti') return
+    expect(decl.flow).toBeUndefined()
+    expect(decl.participants.length).toBe(3)
+    expect(decl.participants[0].name).toBe('citizen')
+    expect(decl.participants[2].name).toBe('uidai')
+  })
+
   it('throws a clear error on bad syntax', () => {
     expect(() => parse('smriti { }')).toThrow(/Expected 'identifier'/)
   })
