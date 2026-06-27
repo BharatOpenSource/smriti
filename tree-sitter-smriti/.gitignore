@@ -1,0 +1,3 @@
+# Local build artifacts — not needed for editor integration
+node_modules/
+build/

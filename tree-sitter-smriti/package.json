@@ -1,0 +1,53 @@
+{
+  "name": "tree-sitter-smriti",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for the Smriti language (.smr files)",
+  "keywords": [
+    "tree-sitter",
+    "smriti",
+    "parser"
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "homepage": "https://github.com/BharatOpenSource/smriti",
+  "license": "MIT",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "generate": "tree-sitter generate",
+    "build": "tree-sitter generate && node-gyp build",
+    "test": "tree-sitter test",
+    "parse": "tree-sitter parse",
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.smriti",
+      "file-types": [
+        "smr"
+      ],
+      "highlights": "queries/highlights.scm",
+      "injection-regex": "smriti"
+    }
+  ],
+  "peerDependencies": {
+    "tree-sitter": "^0.22.0"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.22.6",
+    "prebuildify": "^6.0.0"
+  },
+  "allowScripts": {
+    "tree-sitter-cli@0.22.6": true
+  },
+  "dependencies": {
+    "node-gyp-build": "^4.8.0"
+  }
+}

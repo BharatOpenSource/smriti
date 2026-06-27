@@ -1,0 +1,1719 @@
+[
+  {
+    "type": "aagama_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "typed_field",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "aavaha_aagama",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "typed_field",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "aavaha_decl",
+    "named": true,
+    "fields": {
+      "target": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "name_ref",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "aavaha_aagama",
+          "named": true
+        },
+        {
+          "type": "aavaha_nirgama",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "aavaha_nirgama",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "typed_field",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "aavartana_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "version",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "adhikara_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "adhipati_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "and_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "and_expr",
+          "named": true
+        },
+        {
+          "type": "cmp_expr",
+          "named": true
+        },
+        {
+          "type": "not_expr",
+          "named": true
+        },
+        {
+          "type": "or_expr",
+          "named": true
+        },
+        {
+          "type": "primary",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "anubhaga_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "parallel_track",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "anugama_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "apavaada_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "arrow",
+          "named": true
+        },
+        {
+          "type": "branch_target",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "arrow",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "avadhi_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "number",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "bhumika_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "branch_target",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "anaapta",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "svasti",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "cmp_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "and_expr",
+          "named": true
+        },
+        {
+          "type": "cmp_expr",
+          "named": true
+        },
+        {
+          "type": "compare_op",
+          "named": true
+        },
+        {
+          "type": "not_expr",
+          "named": true
+        },
+        {
+          "type": "or_expr",
+          "named": true
+        },
+        {
+          "type": "primary",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "collection_type",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "type",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "compare_op",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "description",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "expression",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "and_expr",
+          "named": true
+        },
+        {
+          "type": "cmp_expr",
+          "named": true
+        },
+        {
+          "type": "not_expr",
+          "named": true
+        },
+        {
+          "type": "or_expr",
+          "named": true
+        },
+        {
+          "type": "primary",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "flow",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "flow_item",
+          "named": true
+        },
+        {
+          "type": "iti",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "flow_item",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "aavaha_decl",
+          "named": true
+        },
+        {
+          "type": "anaapta",
+          "named": true
+        },
+        {
+          "type": "anubhaga_decl",
+          "named": true
+        },
+        {
+          "type": "anugama_decl",
+          "named": true
+        },
+        {
+          "type": "pada_decl",
+          "named": true
+        },
+        {
+          "type": "sthiti_decl",
+          "named": true
+        },
+        {
+          "type": "svasti",
+          "named": true
+        },
+        {
+          "type": "vibhaga_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "hetu_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "description",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "iti",
+    "named": true,
+    "fields": {
+      "label": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "kaarya_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "karta_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "name_ref",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "khanda_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "kshetra_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "lagna_decl",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        },
+        {
+          "type": "version",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "metadata",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "aavartana_decl",
+          "named": true
+        },
+        {
+          "type": "adhipati_decl",
+          "named": true
+        },
+        {
+          "type": "avadhi_decl",
+          "named": true
+        },
+        {
+          "type": "kshetra_decl",
+          "named": true
+        },
+        {
+          "type": "prabhaava_decl",
+          "named": true
+        },
+        {
+          "type": "stara_decl",
+          "named": true
+        },
+        {
+          "type": "sthala_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "name_ref",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "qualified_name",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "nirgama_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "typed_field",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "niyama_clause",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "arrow",
+          "named": true
+        },
+        {
+          "type": "branch_target",
+          "named": true
+        },
+        {
+          "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "not_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "and_expr",
+          "named": true
+        },
+        {
+          "type": "cmp_expr",
+          "named": true
+        },
+        {
+          "type": "not_expr",
+          "named": true
+        },
+        {
+          "type": "or_expr",
+          "named": true
+        },
+        {
+          "type": "primary",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "or_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "and_expr",
+          "named": true
+        },
+        {
+          "type": "cmp_expr",
+          "named": true
+        },
+        {
+          "type": "not_expr",
+          "named": true
+        },
+        {
+          "type": "or_expr",
+          "named": true
+        },
+        {
+          "type": "primary",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "pada_body",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "aagama_decl",
+          "named": true
+        },
+        {
+          "type": "apavaada_decl",
+          "named": true
+        },
+        {
+          "type": "kaarya_decl",
+          "named": true
+        },
+        {
+          "type": "karta_decl",
+          "named": true
+        },
+        {
+          "type": "khanda_decl",
+          "named": true
+        },
+        {
+          "type": "nirgama_decl",
+          "named": true
+        },
+        {
+          "type": "routing",
+          "named": true
+        },
+        {
+          "type": "samapti_decl",
+          "named": true
+        },
+        {
+          "type": "samaya_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "pada_decl",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "pada_body",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "parallel_track",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "flow_item",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "participant",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "participant_body",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "participant_body",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "adhikara_decl",
+          "named": true
+        },
+        {
+          "type": "bhumika_decl",
+          "named": true
+        },
+        {
+          "type": "pramana_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "prabhaava_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "date",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "pramana_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "prativritti_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "pravritti_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "primary",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "number",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        },
+        {
+          "type": "tarka_value",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "qualified_name",
+    "named": true,
+    "fields": {
+      "member": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "namespace": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "reference",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "lagna_decl",
+          "named": true
+        },
+        {
+          "type": "sangama_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "routing",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "prativritti_decl",
+          "named": true
+        },
+        {
+          "type": "pravritti_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "samapti_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "arrow",
+          "named": true
+        },
+        {
+          "type": "branch_target",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "samaya_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "number",
+          "named": true
+        },
+        {
+          "type": "time_unit",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sangama_decl",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "scalar_type",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "smriti_body",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "aagama_decl",
+          "named": true
+        },
+        {
+          "type": "flow",
+          "named": true
+        },
+        {
+          "type": "metadata",
+          "named": true
+        },
+        {
+          "type": "nirgama_decl",
+          "named": true
+        },
+        {
+          "type": "participant",
+          "named": true
+        },
+        {
+          "type": "reference",
+          "named": true
+        },
+        {
+          "type": "trigger",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "smriti_decl",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "smriti_body",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "source_file",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "smriti_decl",
+          "named": true
+        },
+        {
+          "type": "sutra_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "stara_decl",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "sthala_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sthiti_decl",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "sutra_body",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "aagama_decl",
+          "named": true
+        },
+        {
+          "type": "flow",
+          "named": true
+        },
+        {
+          "type": "metadata",
+          "named": true
+        },
+        {
+          "type": "nirgama_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sutra_decl",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "sutra_body",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "tarka_value",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "time_unit",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "trigger",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "hetu_decl",
+          "named": true
+        },
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "vrtti_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "type",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "collection_type",
+          "named": true
+        },
+        {
+          "type": "scalar_type",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "typed_field",
+    "named": true,
+    "fields": {
+      "field_name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "type",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "vibhaga_decl",
+    "named": true,
+    "fields": {
+      "on": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "niyama_clause",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "vrtti_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "description",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "!",
+    "named": false
+  },
+  {
+    "type": "!=",
+    "named": false
+  },
+  {
+    "type": "&&",
+    "named": false
+  },
+  {
+    "type": "(",
+    "named": false
+  },
+  {
+    "type": ")",
+    "named": false
+  },
+  {
+    "type": ",",
+    "named": false
+  },
+  {
+    "type": "->",
+    "named": false
+  },
+  {
+    "type": ".",
+    "named": false
+  },
+  {
+    "type": ":",
+    "named": false
+  },
+  {
+    "type": "<",
+    "named": false
+  },
+  {
+    "type": "<=",
+    "named": false
+  },
+  {
+    "type": "==",
+    "named": false
+  },
+  {
+    "type": ">",
+    "named": false
+  },
+  {
+    "type": ">=",
+    "named": false
+  },
+  {
+    "type": "[",
+    "named": false
+  },
+  {
+    "type": "]",
+    "named": false
+  },
+  {
+    "type": "aagama",
+    "named": false
+  },
+  {
+    "type": "aavaha",
+    "named": false
+  },
+  {
+    "type": "aavartana",
+    "named": false
+  },
+  {
+    "type": "adhikara",
+    "named": false
+  },
+  {
+    "type": "adhipati",
+    "named": false
+  },
+  {
+    "type": "anaapta",
+    "named": true
+  },
+  {
+    "type": "antara",
+    "named": false
+  },
+  {
+    "type": "anubhaga",
+    "named": false
+  },
+  {
+    "type": "anugama",
+    "named": false
+  },
+  {
+    "type": "apavaada",
+    "named": false
+  },
+  {
+    "type": "asatya",
+    "named": false
+  },
+  {
+    "type": "avadhi",
+    "named": false
+  },
+  {
+    "type": "avyakta",
+    "named": false
+  },
+  {
+    "type": "bhinnaanka",
+    "named": false
+  },
+  {
+    "type": "bhumika",
+    "named": false
+  },
+  {
+    "type": "comment",
+    "named": true
+  },
+  {
+    "type": "dashaamsha",
+    "named": false
+  },
+  {
+    "type": "date",
+    "named": true
+  },
+  {
+    "type": "ghatana",
+    "named": false
+  },
+  {
+    "type": "hetu",
+    "named": false
+  },
+  {
+    "type": "identifier",
+    "named": true
+  },
+  {
+    "type": "iti",
+    "named": false
+  },
+  {
+    "type": "kaarya",
+    "named": false
+  },
+  {
+    "type": "karta",
+    "named": false
+  },
+  {
+    "type": "khanda",
+    "named": false
+  },
+  {
+    "type": "kosa",
+    "named": false
+  },
+  {
+    "type": "krama",
+    "named": false
+  },
+  {
+    "type": "kshetra",
+    "named": false
+  },
+  {
+    "type": "lagna",
+    "named": false
+  },
+  {
+    "type": "nirgama",
+    "named": false
+  },
+  {
+    "type": "niyama",
+    "named": false
+  },
+  {
+    "type": "number",
+    "named": true
+  },
+  {
+    "type": "pada",
+    "named": false
+  },
+  {
+    "type": "paksha",
+    "named": false
+  },
+  {
+    "type": "patra",
+    "named": false
+  },
+  {
+    "type": "prabhaava",
+    "named": false
+  },
+  {
+    "type": "pramana",
+    "named": false
+  },
+  {
+    "type": "prativritti",
+    "named": false
+  },
+  {
+    "type": "pravah",
+    "named": false
+  },
+  {
+    "type": "pravritti",
+    "named": false
+  },
+  {
+    "type": "private",
+    "named": false
+  },
+  {
+    "type": "public",
+    "named": false
+  },
+  {
+    "type": "restricted",
+    "named": false
+  },
+  {
+    "type": "samapti",
+    "named": false
+  },
+  {
+    "type": "samaya",
+    "named": false
+  },
+  {
+    "type": "sangama",
+    "named": false
+  },
+  {
+    "type": "sankhya",
+    "named": false
+  },
+  {
+    "type": "satya",
+    "named": false
+  },
+  {
+    "type": "smriti",
+    "named": false
+  },
+  {
+    "type": "stara",
+    "named": false
+  },
+  {
+    "type": "sthala",
+    "named": false
+  },
+  {
+    "type": "sthiti",
+    "named": false
+  },
+  {
+    "type": "string",
+    "named": true
+  },
+  {
+    "type": "sutra",
+    "named": false
+  },
+  {
+    "type": "svasti",
+    "named": true
+  },
+  {
+    "type": "tarka",
+    "named": false
+  },
+  {
+    "type": "tithi",
+    "named": false
+  },
+  {
+    "type": "vakya",
+    "named": false
+  },
+  {
+    "type": "version",
+    "named": true
+  },
+  {
+    "type": "vibhaga",
+    "named": false
+  },
+  {
+    "type": "vikalpa",
+    "named": false
+  },
+  {
+    "type": "vrtti",
+    "named": false
+  },
+  {
+    "type": "yuja",
+    "named": false
+  },
+  {
+    "type": "{",
+    "named": false
+  },
+  {
+    "type": "||",
+    "named": false
+  },
+  {
+    "type": "}",
+    "named": false
+  },
+  {
+    "type": "→",
+    "named": false
+  }
+]
