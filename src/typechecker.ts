@@ -177,6 +177,9 @@ class Checker {
       if (item.kind === 'pada') {
         for (const f of item.nirgama) map.set(f.name, f.type)
       }
+      if (item.kind === 'aavaha') {
+        for (const f of item.nirgama) map.set(f.name, f.type)
+      }
       if (item.kind === 'anubhaga') {
         for (const track of item.tracks) {
           for (const [k, v] of this.collectProduced(track)) map.set(k, v)

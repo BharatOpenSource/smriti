@@ -1,0 +1,131 @@
+smriti gst-refund-claim {
+  adhipati:  "Central Board of Indirect Taxes and Customs"
+  aavartana: 1.0.0
+  stara:     public
+  sthala:    "India"
+  avadhi:    90 antara
+
+  # Process inputs — provided by the taxpayer at the point of filing
+  aagama:  gstin (vakya), filing-period (vakya), refund-category (vakya)
+
+  # Process outputs — available when refund is disbursed or deemed approved
+  nirgama: refund-reference (vakya), amount-disbursed (sankhya)
+
+  # Parser order: metadata → aagama → nirgama → references → participants → ghatana → pravah
+
+  paksha taxpayer {
+    bhumika:  applicant
+    adhikara: submit-application, respond-to-notice, track-status
+  }
+
+  paksha gst-officer {
+    bhumika:  adjudicating-authority
+    adhikara: acknowledge, scrutinize, issue-notice, approve, reject
+    pramana:  "CGST Act 2017, Section 54"
+  }
+
+  paksha bank {
+    bhumika:  payment-processor
+    adhikara: disburse
+  }
+
+  ghatana {
+    vrtti: "Taxpayer submits refund application on the GST portal"
+    hetu:  "Excess Input Tax Credit accumulation or export-related refund eligibility"
+  }
+
+  pravah {
+
+    pada file-application {
+      karta:   taxpayer
+      kaarya:  "Submit Form RFD-01 on the GST portal with GSTIN, period, and supporting documents"
+      aagama:  gstin (vakya), filing-period (vakya), refund-category (vakya)
+      nirgama: application-id (vakya), claimed-amount (sankhya), docs-submitted (tarka)
+      samaya:  1 antara
+      apavaada → anaapta
+    }
+
+    pada acknowledge-receipt {
+      karta:   gst-officer
+      kaarya:  "System generates Application Reference Number and issues email acknowledgement"
+      aagama:  application-id (vakya), docs-submitted (tarka)
+      nirgama: arn (vakya)
+      samaya:  1 antara
+    }
+
+    pada scrutinize {
+      karta:   gst-officer
+      kaarya:  "Verify ITC ledger balance, cross-check GSTR-1/3B, validate export data and claimed amount"
+      aagama:  arn (vakya), claimed-amount (sankhya)
+      nirgama: scrutiny-outcome (tarka), verified-amount (sankhya), remarks (vakya)
+      samaya:  15 antara
+      apavaada → issue-deficiency-notice
+      samapti  → deemed-approved
+    }
+
+    vibhaga scrutiny-outcome {
+      niyama satya    → sanction-order
+      niyama asatya   → issue-deficiency-notice
+      niyama avyakta  → issue-deficiency-notice
+    }
+
+    pada issue-deficiency-notice {
+      karta:   gst-officer
+      kaarya:  "Issue Form RFD-08 specifying missing documents or discrepancies found during scrutiny"
+      aagama:  remarks (vakya)
+      nirgama: notice-id (vakya)
+      samaya:  3 antara
+    }
+
+    # Taxpayer resubmits with corrections; prativritti loops back to scrutinize.
+    # If taxpayer fails to respond within 15 days the claim lapses (anaapta).
+    pada respond-to-notice {
+      karta:    taxpayer
+      kaarya:   "Submit Form RFD-09 with clarification, corrected figures, and additional evidence"
+      aagama:   notice-id (vakya)
+      nirgama:  revised-docs (vakya)
+      samaya:   15 antara
+      apavaada → anaapta
+      samapti  → anaapta
+      prativritti: scrutinize
+    }
+
+    pada sanction-order {
+      karta:   gst-officer
+      kaarya:  "Issue Form RFD-06 sanction order for the eligible refund amount"
+      aagama:  verified-amount (sankhya)
+      nirgama: sanctioned-amount (sankhya), order-id (vakya)
+      samaya:  7 antara
+      apavaada → anaapta
+    }
+
+    pada disburse-refund {
+      karta:   bank
+      kaarya:  "Credit the sanctioned amount to the taxpayer registered bank account via NEFT/RTGS"
+      aagama:  sanctioned-amount (sankhya), order-id (vakya)
+      nirgama: refund-reference (vakya), amount-disbursed (sankhya)
+      samaya:  3 antara
+      apavaada → anaapta
+    }
+
+    svasti
+
+    # Deemed approval path — CGST Act Section 54(7):
+    # if no order is issued within 60 days of acknowledgement, the refund is
+    # deemed sanctioned and must be paid without further proceedings.
+    pada deemed-approved {
+      karta:   gst-officer
+      kaarya:  "Statutory limit elapsed — system auto-sanctions the claimed amount without a manual order"
+      aagama:  claimed-amount (sankhya), arn (vakya)
+      nirgama: refund-reference (vakya), amount-disbursed (sankhya)
+      samaya:  2 antara
+      apavaada → anaapta
+    }
+
+    svasti
+
+    anaapta
+
+  }
+
+} iti gst-refund-claim

@@ -152,4 +152,34 @@ smriti test {
 }
 `, /aagama 'old-passport': declared as vakya but produced as patra/)
   })
+
+  it('accepts vibhaga on field produced by aavaha nirgama', () => {
+    pass(flow(`
+      pada deploy { nirgama: endpoint (vakya) }
+      aavaha smoke-runner
+        aagama:  endpoint (vakya)
+        nirgama: smoke-ok (tarka)
+      vibhaga smoke-ok {
+        niyama satya   → svasti
+        niyama asatya  → anaapta
+        niyama avyakta → anaapta
+      }
+      svasti
+      anaapta
+    `))
+  })
+
+  it('rejects vibhaga on field not produced by aavaha when aavaha nirgama is different', () => {
+    fail(flow(`
+      aavaha smoke-runner
+        nirgama: smoke-ok (tarka)
+      vibhaga missing-field {
+        niyama satya   → svasti
+        niyama asatya  → anaapta
+        niyama avyakta → anaapta
+      }
+      svasti
+      anaapta
+    `), /vibhaga 'missing-field' references field not produced by any step/)
+  })
 })

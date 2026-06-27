@@ -1,0 +1,156 @@
+smriti software-release-pipeline {
+  adhipati:  "Platform Engineering"
+  aavartana: 2.0.0
+  stara:     restricted
+
+  aagama:  service-name (vakya), version-tag (vakya), target-env (vakya)
+  nirgama: deployed-version (vakya), deploy-url (vakya)
+
+  # Parser order: metadata → aagama → nirgama → references → participants → ghatana → pravah
+
+  # Smoke-test suite lives in its own file and is invoked as a sub-process.
+  # Demonstrates cross-file composition via sangama + aavaha.
+  sangama smoke-tests {
+    yuja: "./smoke-test-suite.smr"
+  }
+
+  paksha engineer {
+    bhumika:  developer
+    adhikara: trigger-release, hotfix-override
+  }
+
+  paksha ci-system {
+    bhumika:  automation
+    adhikara: build, test, scan, deploy, rollback
+  }
+
+  paksha release-manager {
+    bhumika:  approver
+    adhikara: approve-deploy, reject-deploy
+  }
+
+  paksha on-call {
+    bhumika:  incident-responder
+    adhikara: rollback, acknowledge-incident
+  }
+
+  ghatana {
+    vrtti: "Pull request merged to main branch"
+    hetu:  "Automated release triggered on every merge to main"
+  }
+
+  pravah {
+
+    pada build {
+      karta:   ci-system
+      kaarya:  "Compile source, run linter, generate versioned artifact and publish to registry"
+      aagama:  service-name (vakya), version-tag (vakya)
+      nirgama: artifact-id (vakya)
+      samaya:  8 antara
+      apavaada → notify-failure
+    }
+
+    # Three verification tracks run in parallel — none depend on each other's output.
+    # All three must complete before the pipeline advances (anugama joins them).
+    anubhaga {
+      pada unit-tests {
+        karta:   ci-system
+        kaarya:  "Run full unit test suite and enforce coverage threshold"
+        samaya:  12 antara
+        apavaada → anaapta
+      }
+    }, {
+      pada integration-tests {
+        karta:   ci-system
+        kaarya:  "Run integration tests against ephemeral staging database"
+        samaya:  20 antara
+        apavaada → anaapta
+      }
+    }, {
+      pada security-scan {
+        karta:   ci-system
+        kaarya:  "Run SAST, SCA dependency audit, and secret detection scan"
+        samaya:  15 antara
+        apavaada → anaapta
+      }
+    }
+
+    anugama unit-tests integration-tests security-scan
+
+    pada consolidate {
+      karta:   ci-system
+      kaarya:  "Aggregate results from all parallel tracks and produce a single go/no-go signal"
+      nirgama: all-checks-passed (tarka)
+    }
+
+    vibhaga all-checks-passed {
+      niyama satya    → request-approval
+      niyama asatya   → notify-failure
+      niyama avyakta  → notify-failure
+    }
+
+    pada request-approval {
+      karta:   release-manager
+      kaarya:  "Review test summary, artifact changelog, and approve or reject the deployment"
+      aagama:  artifact-id (vakya)
+      nirgama: approved (tarka)
+      samaya:  8 antara
+      apavaada → notify-failure
+      samapti  → notify-failure
+    }
+
+    vibhaga approved {
+      niyama satya    → deploy
+      niyama asatya   → notify-failure
+      niyama avyakta  → notify-failure
+    }
+
+    pada deploy {
+      karta:   ci-system
+      kaarya:  "Blue-green deploy artifact to target environment and cut over traffic"
+      aagama:  artifact-id (vakya), target-env (vakya)
+      nirgama: deployed-version (vakya), deploy-url (vakya)
+      samaya:  15 antara
+      apavaada → emergency-rollback
+      samapti  → emergency-rollback
+    }
+
+    # Invoke the smoke-test sub-process from the imported smoke-tests namespace.
+    # If smoke tests fail, emergency-rollback is triggered immediately.
+    aavaha smoke-tests.run-suite
+      aagama:  deploy-url (vakya)
+      nirgama: smoke-ok (tarka)
+
+    vibhaga smoke-ok {
+      niyama satya    → svasti
+      niyama asatya   → emergency-rollback
+      niyama avyakta  → emergency-rollback
+    }
+
+    svasti
+
+    pada emergency-rollback {
+      karta:   on-call
+      kaarya:  "Restore the last known-good version, cut back traffic, and page the incident channel"
+      aagama:  deployed-version (vakya)
+      nirgama: rollback-complete (tarka)
+      samaya:  10 antara
+      apavaada → anaapta
+      pravritti: post-incident-review
+    }
+
+    # Named wait state — pipeline holds here until the team completes
+    # a post-incident review and explicitly clears it for the next release.
+    sthiti post-incident-review
+
+    pada notify-failure {
+      karta:   engineer
+      kaarya:  "Post failure summary with logs, test report, and diff link to the team channel"
+      nirgama: notification-sent (tarka)
+    }
+
+    anaapta
+
+  }
+
+} iti software-release-pipeline

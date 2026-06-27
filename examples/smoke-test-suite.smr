@@ -1,0 +1,46 @@
+smriti run-suite {
+  adhipati:  "QA Automation"
+  stara:     restricted
+
+  aagama:  deploy-url (vakya)
+  nirgama: smoke-ok (tarka)
+
+  paksha automation { bhumika: test-runner }
+
+  pravah {
+
+    pada health-check {
+      karta:   automation
+      kaarya:  "GET /health and assert HTTP 200 within 2 seconds"
+      aagama:  deploy-url (vakya)
+      nirgama: health-ok (tarka)
+      samaya:  1 antara
+      apavaada → anaapta
+    }
+
+    vibhaga health-ok {
+      niyama satya    → critical-paths
+      niyama asatya   → anaapta
+      niyama avyakta  → anaapta
+    }
+
+    pada critical-paths {
+      karta:   automation
+      kaarya:  "Exercise the three highest-traffic user journeys end-to-end"
+      nirgama: smoke-ok (tarka)
+      samaya:  5 antara
+      apavaada → anaapta
+    }
+
+    vibhaga smoke-ok {
+      niyama satya    → svasti
+      niyama asatya   → anaapta
+      niyama avyakta  → anaapta
+    }
+
+    svasti
+    anaapta
+
+  }
+
+} iti run-suite
