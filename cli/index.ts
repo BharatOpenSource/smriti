@@ -5,6 +5,7 @@ import { parse } from '../src/parser.js'
 import { typecheck } from '../src/typechecker.js'
 import { resolveImports, parseRegistryUri, registryCachePath } from '../src/resolver.js'
 import { toYaml } from '../src/backends/yaml.js'
+import { toSutraYaml } from '../src/backends/sutra-yaml.js'
 import { toSvg, type Script } from '../src/backends/svg.js'
 import { evaluateGhatana, type Payload } from '../src/evaluator.js'
 
@@ -113,7 +114,14 @@ function run() {
 
     const decl = ast.decls[0]
     if (!decl) { console.error('smr: no declarations found'); process.exit(1) }
-    if (decl.kind !== 'smriti') { console.error('smr: sutra files compile to .sut — use a smriti file'); process.exit(1) }
+
+    if (decl.kind === 'sutra') {
+      if (flags.has('--svg')) {
+        console.error('smr: --svg is not supported for sutra files'); process.exit(1)
+      }
+      output(toSutraYaml(decl))
+      return
+    }
 
     if (flags.has('--svg')) {
       const script: Script = scriptArg === 'devanagari' ? 'devanagari' : 'latin'

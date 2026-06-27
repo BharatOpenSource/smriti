@@ -59,6 +59,7 @@ export const enum TokenKind {
   ARROW = '→',
 
   // Expression operators
+  EQ = '=',
   EQEQ = '==', NEQ = '!=',
   LT = '<',    GT = '>',
   LTE = '<=',  GTE = '>=',
@@ -159,14 +160,15 @@ export function lex(source: string): Token[] {
       i += 2; continue
     }
 
-    // Multi-character expression operators — checked before single-char punctuation
+    // Multi-character expression operators — checked before single-char
     if (ch === '=' && peek(1) === '=') { tokens.push({ kind: TokenKind.EQEQ, value: '==', pos: pos() }); i += 2; continue }
     if (ch === '!' && peek(1) === '=') { tokens.push({ kind: TokenKind.NEQ,  value: '!=', pos: pos() }); i += 2; continue }
     if (ch === '<' && peek(1) === '=') { tokens.push({ kind: TokenKind.LTE,  value: '<=', pos: pos() }); i += 2; continue }
     if (ch === '>' && peek(1) === '=') { tokens.push({ kind: TokenKind.GTE,  value: '>=', pos: pos() }); i += 2; continue }
     if (ch === '&' && peek(1) === '&') { tokens.push({ kind: TokenKind.AND,  value: '&&', pos: pos() }); i += 2; continue }
     if (ch === '|' && peek(1) === '|') { tokens.push({ kind: TokenKind.OR,   value: '||', pos: pos() }); i += 2; continue }
-    // Single-char expression operators
+    // Single-char expression operators (= after == to avoid conflict)
+    if (ch === '=') { tokens.push({ kind: TokenKind.EQ,   value: '=',  pos: pos() }); i++; continue }
     if (ch === '<') { tokens.push({ kind: TokenKind.LT,   value: '<',  pos: pos() }); i++; continue }
     if (ch === '>') { tokens.push({ kind: TokenKind.GT,   value: '>',  pos: pos() }); i++; continue }
     if (ch === '!') { tokens.push({ kind: TokenKind.BANG, value: '!',  pos: pos() }); i++; continue }

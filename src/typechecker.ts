@@ -18,6 +18,22 @@ function typeStr(t: SmritiType): string {
   return t.kind
 }
 
+// Validates type constraints recursively (inner types of krama/kosa included).
+function checkTypeConstraints(t: SmritiType, pos: Pos, fail: (msg: string, p: Pos) => void) {
+  if (t.kind === 'sankhya') {
+    if (t.min !== undefined && t.max !== undefined && t.min > t.max) {
+      fail(`sankhya constraint: min (${t.min}) must not exceed max (${t.max})`, pos)
+    }
+  }
+  if (t.kind === 'vakya' && t.pattern !== undefined) {
+    try { new RegExp(t.pattern) } catch {
+      fail(`vakya pattern is not a valid regular expression: ${t.pattern}`, pos)
+    }
+  }
+  if (t.kind === 'krama') checkTypeConstraints(t.of, pos, fail)
+  if (t.kind === 'kosa')  { checkTypeConstraints(t.key, pos, fail); checkTypeConstraints(t.value, pos, fail) }
+}
+
 export class TypecheckError extends Error {
   constructor(message: string, public pos: Pos) {
     super(`[${pos.line}:${pos.col}] ${message}`)
@@ -45,6 +61,8 @@ class Checker {
     this.checkIti(decl.name, decl.itiName, decl.pos)
     const participantNames = new Set(decl.participants.map(p => p.name))
     for (const p of decl.participants) this.checkIti(p.name, p.itiName, p.pos)
+    if (decl.aagama)  this.checkTypedFields(decl.aagama)
+    if (decl.nirgama) this.checkTypedFields(decl.nirgama)
     // Smriti-level aagama are process inputs from the caller — pre-seeded as produced.
     const externalInputs = new Map<string, SmritiType>()
     if (decl.aagama) for (const f of decl.aagama) externalInputs.set(f.name, f.type)
@@ -82,14 +100,17 @@ class Checker {
 
   private checkSutra(decl: SutraDecl) {
     this.checkIti(decl.name, decl.itiName, decl.pos)
-    if (decl.aagama) this.checkTypedFields(decl.aagama)
+    if (decl.aagama)  this.checkTypedFields(decl.aagama)
     if (decl.nirgama) this.checkTypedFields(decl.nirgama)
+    // Seed sutra-level aagama as external inputs to the flow (mirrors smriti treatment).
+    const externalInputs = new Map<string, SmritiType>()
+    if (decl.aagama) for (const f of decl.aagama) externalInputs.set(f.name, f.type)
     // aadesha steps must reference a pada that exists in the flow (no parent context here —
     // full inheritance check runs only when the merged sutra is assembled by the resolver).
     for (const item of decl.flow.items) {
       if (item.kind === 'aadesha') this.checkPada(item.pada, new Set(), new Set())
     }
-    this.checkFlow(decl.flow, new Set())
+    this.checkFlow(decl.flow, new Set(), externalInputs)
   }
 
   // ─── Expression types ─────────────────────────────────────────────────────
@@ -218,6 +239,9 @@ class Checker {
       if (item.kind === 'aadesha') {
         for (const f of item.pada.nirgama) map.set(f.name, f.type)
       }
+      if (item.kind === 'varna') {
+        map.set(item.name, item.varnaType)
+      }
       if (item.kind === 'aavaha') {
         for (const f of item.nirgama) map.set(f.name, f.type)
       }
@@ -282,6 +306,7 @@ class Checker {
     const collect = (items: FlowItem[]) => {
       for (const item of items) {
         if (item.kind === 'pada')    names.add(item.name)
+        if (item.kind === 'varna')   names.add(item.name)    // varna produces a named field
         if (item.kind === 'aadesha') names.add(item.target)  // aadesha counts as that step name
         if (item.kind === 'sthiti') names.add(item.name)
         if (item.kind === 'anubhaga') {
@@ -312,6 +337,7 @@ class Checker {
     switch (item.kind) {
       case 'pada':     return this.checkPada(item, stepNames, participants)
       case 'aadesha':  return this.checkPada(item.pada, stepNames, participants)
+      case 'varna':    return this.checkVarna(item)
       case 'vibhaga':  return this.checkVibhaga(item, stepNames)
       case 'anubhaga': {
         for (const track of item.tracks) {
@@ -432,6 +458,25 @@ class Checker {
 
     if (pada.aagama) this.checkTypedFields(pada.aagama)
     if (pada.nirgama) this.checkTypedFields(pada.nirgama)
+
+    // Error/timeout data fields — validate that they're well-typed
+    if (pada.apavaadaNirgama) {
+      if (!pada.apavaada) {
+        this.fail(`apavaada data declared on '${pada.name}' but no apavaada routing — add: apavaada → handler`, pada.pos)
+      }
+      this.checkTypedFields(pada.apavaadaNirgama)
+    }
+    if (pada.samaptiNirgama) {
+      if (!pada.samapti) {
+        this.fail(`samapti data declared on '${pada.name}' but no samapti routing — add: samapti → handler`, pada.pos)
+      }
+      this.checkTypedFields(pada.samaptiNirgama)
+    }
+  }
+
+  private checkVarna(varna: import('./ast.js').VarnaDecl) {
+    this.checkType(varna.varnaType, varna.pos)
+    if (varna.expr) this.checkExpression(varna.expr)
   }
 
   // ─── Branching ─────────────────────────────────────────────────────────────
@@ -481,20 +526,8 @@ class Checker {
   }
 
   private checkType(type: SmritiType, pos: Pos) {
-    if (type.kind === 'sankhya') {
-      if (type.min !== undefined && type.max !== undefined && type.min > type.max) {
-        this.fail(`sankhya constraint: min (${type.min}) must not exceed max (${type.max})`, pos)
-      }
-    }
-    if (type.kind === 'vakya' && type.pattern !== undefined) {
-      try { new RegExp(type.pattern) } catch {
-        this.fail(`vakya pattern is not a valid regular expression: ${type.pattern}`, pos)
-      }
-    }
-    if (type.kind === 'krama') this.checkType(type.of, pos)
+    checkTypeConstraints(type, pos, (msg, p) => this.fail(msg, p))
     if (type.kind === 'kosa') {
-      this.checkType(type.key, pos)
-      this.checkType(type.value, pos)
       // kosa keys must be a scalar type
       if (type.key.kind === 'krama' || type.key.kind === 'kosa') {
         this.fail(`kosa key type must be a scalar, not a collection`, pos)

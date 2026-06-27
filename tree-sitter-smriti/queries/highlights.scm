@@ -1,14 +1,15 @@
 ; Syntax highlighting queries for Smriti (.smr files).
 ; Compatible with Neovim (nvim-treesitter) and GitHub Linguist.
 ; Highlight group names follow nvim-treesitter conventions.
+; Mirrors spec/grammar.ebnf v0.3.
 
 ; ─── Structure keywords ────────────────────────────────────────────────────────
 
 [
   "smriti" "sutra" "iti"
-  "pravah" "pada"
+  "pravah" "pada" "aadesha"
   "paksha" "sangama" "lagna"
-  "ghatana"
+  "ghatana" "anuvrtti"
 ] @keyword
 
 ; ─── Flow control keywords ────────────────────────────────────────────────────
@@ -16,9 +17,10 @@
 [
   "vibhaga" "niyama"
   "anubhaga" "anugama"
-  "aavaha" "sthiti"
+  "aavaha" "sthiti" "varna"
   "apavaada" "samapti"
   "pravritti" "prativritti"
+  "prati"
 ] @keyword.control
 
 ; ─── Terminal keywords ────────────────────────────────────────────────────────
@@ -35,7 +37,8 @@
   "bhumika" "adhikara" "pramana"
   "yuja"
   "vrtti" "hetu"
-  "vikalpa" "varna"
+  "sthala"
+  "vikalpa"
 ] @keyword.operator
 
 ; ─── Metadata keywords ────────────────────────────────────────────────────────
@@ -69,10 +72,13 @@
 (smriti_decl name: (identifier) @module)
 (sutra_decl  name: (identifier) @module)
 
-(pada_decl   name: (identifier) @function)
-(participant name: (identifier) @type)
-(sthiti_decl name: (identifier) @constant)
-(vibhaga_decl on: (identifier)  @variable)
+(pada_decl    name: (identifier)   @function)
+(aadesha_decl target: (identifier) @function)
+(varna_decl   name: (identifier)   @variable.declaration)
+(participant  name: (identifier)   @type)
+(sthiti_decl  name: (identifier)   @constant)
+(vibhaga_decl on: (identifier)     @variable)
+(anuvrtti     parent: (name_ref)   @module)
 
 ; iti close marker — label should match the opening name
 (iti label: (identifier) @module)
@@ -104,7 +110,8 @@
 (arrow) @operator
 (compare_op) @operator
 ["||" "&&"] @operator
-"!" @operator
+["!" "="] @operator
+".." @operator
 
 ; ─── Literals ─────────────────────────────────────────────────────────────────
 

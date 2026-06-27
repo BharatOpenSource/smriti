@@ -123,6 +123,7 @@ export interface FlowDecl extends Node {
 export type FlowItem =
   | PadaDecl
   | AadeshaDecl
+  | VarnaDecl
   | VibhagaDecl
   | AnubhagaDecl
   | AnugamaDecl
@@ -139,6 +140,15 @@ export interface AadeshaDecl extends Node {
   pada: PadaDecl   // the replacement step definition
 }
 
+// ─── varna (named variable / data binding between steps) ──────────────────────
+
+export interface VarnaDecl extends Node {
+  kind: 'varna'
+  name: string
+  varnaType: SmritiType
+  expr?: Expression  // optional computed value from existing flow data
+}
+
 // ─── Step ─────────────────────────────────────────────────────────────────────
 
 export interface PadaDecl extends Node {
@@ -152,7 +162,9 @@ export interface PadaDecl extends Node {
   samaya?: Duration
   khanda?: Expression
   apavaada?: string               // on failure: route to this step
+  apavaadaNirgama?: TypedField[]  // fields produced when routing via apavaada
   samapti?: string                // on SLA timeout: route to this step (requires samaya)
+  samaptiNirgama?: TypedField[]   // fields produced when routing via samapti
   routing?: PravrttiDecl | PrativrttiDecl
 }
 

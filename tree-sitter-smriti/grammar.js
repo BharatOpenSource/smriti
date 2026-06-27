@@ -1,5 +1,5 @@
 // Tree-sitter grammar for the Smriti language (.smr files).
-// Mirrors spec/grammar.ebnf v0.2.
+// Mirrors spec/grammar.ebnf v0.3.
 //
 // Generate the C parser:   npx tree-sitter generate
 // Test against a file:     npx tree-sitter parse examples/sample.smr
@@ -38,11 +38,14 @@ module.exports = grammar({
     sutra_decl: $ => seq(
       'sutra',
       field('name', $.identifier),
+      optional($.anuvrtti),
       '{',
       optional($.sutra_body),
       '}',
       optional($.iti),
     ),
+
+    anuvrtti: $ => seq('anuvrtti', field('parent', $.name_ref)),
 
     iti: $ => seq('iti', field('label', $.identifier)),
 
@@ -137,16 +140,24 @@ module.exports = grammar({
     trigger: $ => seq(
       'ghatana',
       '{',
-      repeat1(choice($.vrtti_decl, $.hetu_decl)),
+      repeat($.trigger_field),
       '}',
       optional($.iti),
     ),
 
-    vrtti_decl: $ => seq('vrtti', ':', $.description),
-    hetu_decl:  $ => seq('hetu',  ':', $.description),
+    trigger_field: $ => choice(
+      $.vrtti_decl,
+      $.hetu_decl,
+      $.karta_trigger_decl,
+      $.sthala_trigger_decl,
+      $.kaarya_trigger_decl,
+    ),
 
-    // Description: a string literal or a sequence of words
-    description: $ => choice($.string, repeat1($.identifier)),
+    vrtti_decl:        $ => seq('vrtti',  ':', $.expression),
+    hetu_decl:         $ => seq('hetu',   ':', 'prati', $.number, $.identifier),
+    karta_trigger_decl:  $ => seq('karta',  ':', $.expression),
+    sthala_trigger_decl: $ => seq('sthala', ':', $.expression),
+    kaarya_trigger_decl: $ => seq('kaarya', ':', $.expression),
 
     // ─── Flow ───────────────────────────────────────────────────────────────
 
@@ -160,6 +171,8 @@ module.exports = grammar({
 
     flow_item: $ => choice(
       $.pada_decl,
+      $.aadesha_decl,
+      $.varna_decl,
       $.vibhaga_decl,
       $.anubhaga_decl,
       $.anugama_decl,
@@ -183,6 +196,24 @@ module.exports = grammar({
       optional($.iti),
     ),
 
+    // aadesha: replaces a named parent step's body (Pāṇinian substitute).
+    aadesha_decl: $ => seq(
+      'aadesha',
+      field('target', $.identifier),
+      '{',
+      optional($.pada_body),
+      '}',
+    ),
+
+    // varna: named variable / data binding in the flow.
+    varna_decl: $ => seq(
+      'varna',
+      field('name', $.identifier),
+      ':',
+      field('type', $.type),
+      optional(seq('=', $.expression)),
+    ),
+
     // Fields are unordered in the parser; remain permissive here.
     pada_body: $ => repeat1(choice(
       $.karta_decl,
@@ -192,7 +223,9 @@ module.exports = grammar({
       $.samaya_decl,
       $.khanda_decl,
       $.apavaada_decl,
+      $.apavaada_data,
       $.samapti_decl,
+      $.samapti_data,
       $.routing,
     )),
 
@@ -203,8 +236,15 @@ module.exports = grammar({
     samaya_decl:  $ => seq('samaya',  ':', $.number, $.time_unit),
     khanda_decl:  $ => seq('khanda',  ':', $.expression),
 
+    // apavaada → target: exception routing
     apavaada_decl: $ => seq('apavaada', $.arrow, $.branch_target),
+    // apavaada: fields: error data produced for the exception handler
+    apavaada_data: $ => seq('apavaada', ':', $.typed_field, repeat(seq(',', $.typed_field))),
+
+    // samapti → target: SLA timeout routing (requires samaya)
     samapti_decl:  $ => seq('samapti',  $.arrow, $.branch_target),
+    // samapti: fields: timeout data produced for the timeout handler
+    samapti_data:  $ => seq('samapti',  ':', $.typed_field, repeat(seq(',', $.typed_field))),
 
     routing: $ => choice($.pravritti_decl, $.prativritti_decl),
     pravritti_decl:   $ => seq('pravritti',   ':', $.identifier),
@@ -279,9 +319,18 @@ module.exports = grammar({
 
     type: $ => choice($.scalar_type, $.collection_type),
 
-    scalar_type: _ => choice(
-      'sankhya', 'bhinnaanka', 'dashaamsha',
-      'vakya', 'tithi', 'antara', 'tarka', 'patra',
+    scalar_type: $ => choice(
+      seq('sankhya', optional($.range_constraint)),
+      'bhinnaanka',
+      'dashaamsha',
+      seq('vakya', optional($.string)),  // optional regex pattern
+      'tithi', 'antara', 'tarka', 'patra',
+    ),
+
+    // sankhya range: min..max | min.. | ..max
+    range_constraint: $ => choice(
+      seq($.number, '..', optional($.number)),  // min..max or min..
+      seq('..', $.number),                       // ..max
     ),
 
     collection_type: $ => choice(

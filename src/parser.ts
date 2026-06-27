@@ -4,6 +4,7 @@ import type {
   Metadata, ReferenceDecl, SangamaDecl, LagnaDecl,
   PakshaDecl, GhatanaDecl, HetuSchedule, AadeshaDecl,
   FlowDecl, FlowItem, PadaDecl, Duration,
+  VarnaDecl,
   VibhagaDecl, NiyamaClause, AnubhagaDecl, AnugamaDecl,
   AavahaDecl, SthitiDecl, TypedField, SmritiType,
   Expression, TarkaLiteral, IdentifierExpr,
@@ -301,6 +302,7 @@ class Parser {
       case TokenKind.ANUBHAGA:  return this.parseAnubhaga()
       case TokenKind.ANUGAMA:   return this.parseAnugama()
       case TokenKind.AAVAHA:    return this.parseAavaha()
+      case TokenKind.VARNA:     return this.parseVarna()
       case TokenKind.STHITI:    return this.parseSthiti()
       case TokenKind.SVASTI:    this.advance(); return { kind: 'svasti', pos: t.pos }
       case TokenKind.ANAAPTA:   this.advance(); return { kind: 'anaapta', pos: t.pos }
@@ -341,7 +343,9 @@ class Parser {
     let samaya: Duration | undefined
     let khanda: Expression | undefined
     let apavaada: string | undefined
+    let apavaadaNirgama: TypedField[] | undefined
     let samapti: string | undefined
+    let samaptiNirgama: TypedField[] | undefined
     let routing: PravrttiDecl | PrativrttiDecl | undefined
 
     while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
@@ -358,17 +362,31 @@ class Parser {
       } else if (this.tryEat(TokenKind.KHANDA)) {
         this.eat(TokenKind.COLON); khanda = this.parseExpression()
       } else if (this.tryEat(TokenKind.APAVAADA)) {
-        this.eat(TokenKind.ARROW)
-        const vt = this.peek()
-        apavaada = (vt.kind === TokenKind.SVASTI || vt.kind === TokenKind.ANAAPTA)
-          ? this.advance().value
-          : this.eat(TokenKind.IDENTIFIER, 'apavaada target').value
+        if (this.check(TokenKind.ARROW)) {
+          // apavaada → target : exception routing
+          this.eat(TokenKind.ARROW)
+          const vt = this.peek()
+          apavaada = (vt.kind === TokenKind.SVASTI || vt.kind === TokenKind.ANAAPTA)
+            ? this.advance().value
+            : this.eat(TokenKind.IDENTIFIER, 'apavaada target').value
+        } else {
+          // apavaada: fields : error data produced for the exception handler
+          this.eat(TokenKind.COLON, 'apavaada data fields')
+          apavaadaNirgama = this.parseTypedFields()
+        }
       } else if (this.tryEat(TokenKind.SAMAPTI)) {
-        this.eat(TokenKind.ARROW)
-        const kt = this.peek()
-        samapti = (kt.kind === TokenKind.SVASTI || kt.kind === TokenKind.ANAAPTA)
-          ? this.advance().value
-          : this.eat(TokenKind.IDENTIFIER, 'samapti target').value
+        if (this.check(TokenKind.ARROW)) {
+          // samapti → target : timeout routing
+          this.eat(TokenKind.ARROW)
+          const kt = this.peek()
+          samapti = (kt.kind === TokenKind.SVASTI || kt.kind === TokenKind.ANAAPTA)
+            ? this.advance().value
+            : this.eat(TokenKind.IDENTIFIER, 'samapti target').value
+        } else {
+          // samapti: fields : timeout data produced for the timeout handler
+          this.eat(TokenKind.COLON, 'samapti data fields')
+          samaptiNirgama = this.parseTypedFields()
+        }
       } else if (this.check(TokenKind.PRAVRITTI)) {
         const p = this.pos(); this.advance(); this.eat(TokenKind.COLON)
         routing = { kind: 'pravritti', target: this.eat(TokenKind.IDENTIFIER).value, pos: p }
@@ -378,7 +396,8 @@ class Parser {
       } else break
     }
 
-    return { kind: 'pada', name, karta, kaarya, aagama, nirgama, samaya, khanda, apavaada, samapti, routing, pos }
+    return { kind: 'pada', name, karta, kaarya, aagama, nirgama, samaya, khanda,
+             apavaada, apavaadaNirgama, samapti, samaptiNirgama, routing, pos }
   }
 
   private parseDuration(): Duration {
@@ -472,6 +491,16 @@ class Parser {
     this.eat(TokenKind.STHITI)
     const name = this.eat(TokenKind.IDENTIFIER, 'sthiti').value
     return { kind: 'sthiti', name, pos }
+  }
+
+  private parseVarna(): VarnaDecl {
+    const pos = this.pos()
+    this.eat(TokenKind.VARNA)
+    const name = this.eat(TokenKind.IDENTIFIER, 'varna').value
+    this.eat(TokenKind.COLON, `varna '${name}'`)
+    const varnaType = this.parseType()
+    const expr = this.tryEat(TokenKind.EQ) ? this.parseExpression() : undefined
+    return { kind: 'varna', name, varnaType, expr, pos }
   }
 
   // ─── Types ──────────────────────────────────────────────────────────────────
