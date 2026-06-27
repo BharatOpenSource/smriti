@@ -4,35 +4,47 @@
 
 ## Session: 2026-06-27
 
-**Status:** Toolchain active. 241 tests passing across 16 test files. #1–#9 complete.
+**Status:** All language gaps + infrastructure complete. 264 tests, 17 files. #1–#9 + all gaps done.
 
-**Completed this session:**
+**Language gaps — all complete:**
 
-- [x] #8 `ghatana` semantics — evaluatable trigger/descriptor block on smriti
-  - AST restructured: `GhatanaDecl` has optional fields `vrtti`, `hetu`, `karta`, `sthala`, `kaarya`
-  - `vrtti` — boolean expression evaluated against payload (identifiers = aagama field names)
-  - `hetu` — schedule: `prati N <unit>` (user-defined unit; `antara`, `day`, `submission`, etc.)
-  - `karta`, `sthala`, `kaarya` — informational expressions (unconstrained identifiers — may be participants or literals)
-  - New module `src/evaluator.ts`: `evaluate(expr, payload)`, `toTarka(value)`, `evaluateGhatana(ghatana, payload)`
-  - Typechecker `checkGhatana()`: validates vrtti identifiers against smriti aagama; other fields expression-checked only
-  - CLI: `smr trigger <file> --payload <json>` — evaluates ghatana, prints all field results, exits 0/1 on fires/no-fires
-  - `src/backends/svg.ts` — ghatana header line updated (removed old `.items[0]` reference)
-  - 34 new tests in `tests/ghatana.test.ts` (parsing, typechecking, evaluator, toTarka, evaluateGhatana)
+- [x] **`varna`** — named variable / data binding in the flow
+  - `VarnaDecl { kind: 'varna'; name: string; varnaType: SmritiType; expr?: Expression }`
+  - Added to `FlowItem` union, `parseVarna()` in parser, `checkVarna()` in typechecker
+  - `collectProduced` includes varna field → available to downstream vibhaga/steps
+  - Syntax: `varna is-valid : tarka = amount > 0` or `varna label : vakya`
 
-- [x] #9 `sutra anuvṛtti` — sutra inheritance with Pāṇinian override semantics
-  - Lexer: `anuvrtti`, `aadesha` added as keywords
-  - AST: `SutraDecl.parent?: NameRef`, `AadeshaDecl` (kind: 'aadesha', target: string, pada: PadaDecl) added to FlowItem
-  - Parser: `parseSutra()` checks for `anuvrtti` after name; `parsePadaBody()` extracted (shared by parsePada + parseAadesha); `parseAadesha()` added
-  - Typechecker: aadesha treated as its pada in flow + collectProduced; collectStepNames tracks aadesha targets
-  - `hetu` unit parsing fix: keywords (like `antara`) accepted as unit names (not restricted to IDENTIFIER)
-  - 6 new tests in `tests/inheritance.test.ts` (anuvṛtti parsing, aadesha parsing, typechecking)
+- [x] **Per-step error/timeout data**
+  - `apavaadaNirgama?` and `samaptiNirgama?` on `PadaDecl`
+  - Disambiguated from routing: `apavaada → step` (routing) vs `apavaada: field (type)` (data)
+  - Typechecker validates data fields are well-typed; errors if data declared without routing
+  - Syntax: `apavaada → handle-error` + `apavaada: error-code (vakya), reason (vakya)`
 
-- [x] Example files updated to use expression-based ghatana syntax
-  - `gst-refund-claim.smr`: `vrtti: gstin != "" && refund-category != ""`, hetu/karta/sthala/kaarya set
-  - `software-release-pipeline.smr`: `vrtti: service-name != "" && version-tag != ""`, same fields
+- [x] **`krama`/`kosa` constraints** — inner types already supported by recursive `parseType()`;
+  - Added `checkTypeConstraints()` module-level function (recursive — handles nested collections)
+  - `checkSmriti()` and `checkSutra()` now call `checkTypedFields()` on process-level aagama/nirgama
+  - Sutra aagama now seeded as external inputs to `checkFlow` (same as smriti)
+  - `krama[sankhya 0..100]`, `kosa[vakya, sankhya 0..1000]`, `krama[vakya "[A-Z]+"]` all work
 
-**Test count: 241 (was 207)**
+- [x] **Grammar spec sync** — `spec/grammar.ebnf` rewritten to v0.3:
+  - ghatana: 5 evaluatable fields (vrtti as expression, hetu as prati N unit, karta/sthala/kaarya)
+  - anuvrtti + aadesha, varna-decl, apavaada/samapti data, range/pattern constraints on scalars
+  - `=` (EQ) token added to lexer for varna expression binding
 
-**All pending from #8/#9 design discussion — complete.**
+**Infrastructure — all complete:**
 
-**Full pending list:** see `docs/todo.md`
+- [x] **`sutra` compilation target** — `src/backends/sutra-yaml.ts` → `toSutraYaml()`
+  - CLI dispatches sutra files to this backend; outputs id/kind/version/aagama/nirgama/steps YAML
+  - `smr compile <file.sut>` now works end-to-end
+
+- [x] **Tree-sitter grammar update** — `tree-sitter-smriti/grammar.js` updated to v0.3:
+  - Added: `anuvrtti`, `aadesha_decl`, `varna_decl`, `scalar_type` with `range_constraint`
+  - Added: `apavaada_data`, `samapti_data`, updated `trigger` with 5 evaluatable fields
+  - `highlights.scm` updated: aadesha/varna highlight groups, `=`/`..` operators, `prati`/`anuvrtti`
+  - Note: `tree-sitter generate` not re-run (binaries unchanged); needs run before nvim wiring
+
+**Test count: 264 (was 241)**
+
+**Remaining:**
+- [ ] `smr fetch` HTTP (blocked on pravaaha)
+- [ ] tree-sitter: run `npx tree-sitter generate` + extract to standalone repo for nvim/Linguist
