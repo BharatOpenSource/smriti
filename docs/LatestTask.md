@@ -4,7 +4,7 @@
 
 ## Session: 2026-06-27
 
-**Status:** Toolchain active. 178 tests passing across 13 test files. #1–#4 complete and pushed.
+**Status:** Toolchain active. 178 tests passing across 13 test files. #1–#5 complete and pushed.
 
 **Completed this session:**
 - [x] `apavaada` (अपवाद) — per-step exception routing: `apavaada → handler-step`
@@ -17,8 +17,23 @@
   - CLI: `smr compile --svg --script devanagari file.smr`
   - 9 labels mapped to Devanagari; font-family switches to Noto Sans Devanagari stack
   - metaLine offset widens 48→80 px for wider Devanagari glyphs
+- [x] #5 Tree-sitter grammar — `tree-sitter-smriti/` directory added to repo
+  - `grammar.js` — full grammar authored in tree-sitter DSL, mirrors `spec/grammar.ebnf` v0.2
+  - `src/parser.c` — 184K generated C parser committed (zero-install for editors)
+  - `queries/highlights.scm` — nvim-treesitter highlight groups mapped for all node types
+  - All constructs covered: smriti/sutra, metadata, paksha, sangama/lagna, pravah, pada,
+    apavaada, samapti, vibhaga/niyama, anubhaga/anugama, aavaha, sthiti, expressions
+  - Two key grammar fixes during generation:
+    1. Body rules (`smriti_body`, `pada_body`, etc.) use `optional($.body)` at parent +
+       `repeat1()` inside — tree-sitter forbids syntactic rules matching empty string
+    2. Removed unnecessary `conflicts` declaration — tree-sitter resolved `name_ref`
+       (qualified vs bare identifier) automatically via lookahead
+  - Verified: `tree-sitter parse tests/sample-test.smr` produces clean parse tree, no errors
+  - Bindings scaffolded for Node, Python, Rust, Go, Swift, C by `tree-sitter generate`
+  - To wire into Neovim: point nvim-treesitter parser source at `tree-sitter-smriti/`
+  - For GitHub Linguist: needs extraction to standalone `BharatOpenSource/tree-sitter-smriti` repo
 
 **Next session — starting with:**
-- [ ] #5 Tree-sitter grammar — GitHub/Neovim syntax highlighting; coloring only (LSP handles diagnostics)
+- [ ] #6 Registry resolver — `org/name@version` format for `sangama` imports
 
 **Full pending list:** see `docs/todo.md`
