@@ -1,0 +1,44 @@
+smriti passport-renewal {
+  adhipati: "Ministry of External Affairs"
+  aavartana: 1.0.0
+  stara: public
+  avadhi: 30 antara
+
+  paksha applicant {
+    bhumika: citizen
+    adhikara: submit
+  }
+
+  paksha passport-office {
+    bhumika: processing-authority
+    adhikara: approve, reject
+    pramana: "Passport Act 1967, Section 5"
+  }
+
+  pravah {
+    pada submit {
+      karta: applicant
+      kaarya: "Submit passport renewal application"
+      aagama: old-passport (patra)
+      nirgama: application-id (vakya)
+      samaya: 7 antara
+    }
+
+    pada verify {
+      karta: passport-office
+      kaarya: "Verify submitted documents"
+      aagama: application-id (vakya)
+      nirgama: verified (tarka)
+      samaya: 14 antara
+    }
+
+    vibhaga verified {
+      niyama satya    → svasti
+      niyama asatya   → anaapta
+      niyama avyakta  → anaapta
+    }
+
+    svasti
+    anaapta
+  }
+}

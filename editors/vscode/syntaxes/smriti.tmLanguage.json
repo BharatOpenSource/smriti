@@ -5,10 +5,12 @@
   "patterns": [
     { "include": "#comment" },
     { "include": "#string" },
-    { "include": "#arrow" },
+    { "include": "#property-key" },
+    { "include": "#keyword-top" },
     { "include": "#keyword-flow" },
-    { "include": "#keyword-decl" },
-    { "include": "#keyword-meta" },
+    { "include": "#keyword-terminal" },
+    { "include": "#arrow" },
+    { "include": "#colon" },
     { "include": "#type" },
     { "include": "#constant" },
     { "include": "#number" }
@@ -26,30 +28,53 @@
         { "name": "constant.character.escape.smriti", "match": "\\\\." }
       ]
     },
+
+    "property-key": {
+      "comment": "Keywords that appear as property assignments — always followed by ':'",
+      "name": "entity.other.attribute-name.smriti",
+      "match": "\\b(adhipati|aavartana|stara|avadhi|prabhaava|sthala|kshetra|bhumika|adhikara|pramana|yuja|karta|kaarya|aagama|nirgama|samaya|khanda|pravritti|prativritti)\\b(?=\\s*:)"
+    },
+
+    "keyword-top": {
+      "comment": "Top-level declarators — name a block or entity",
+      "name": "entity.name.type.smriti",
+      "match": "\\b(smriti|sutra|paksha|sangama|lagna|ghatana|vrtti|hetu|varna|anubhaga|anugama|aavaha)\\b"
+    },
+
+    "keyword-flow": {
+      "comment": "Flow structure keywords — control the process path",
+      "name": "keyword.control.smriti",
+      "match": "\\b(pravah|pada|vibhaga|niyama)\\b"
+    },
+
+    "keyword-terminal": {
+      "comment": "Terminal outcome keywords — end states of a process",
+      "name": "support.function.smriti",
+      "match": "\\b(svasti|anaapta|sthiti)\\b"
+    },
+
     "arrow": {
       "name": "keyword.operator.arrow.smriti",
-      "match": "→|->|:"
+      "match": "→|->"
     },
-    "keyword-flow": {
-      "name": "keyword.control.smriti",
-      "match": "\\b(smriti|sutra|pravah|pada|vibhaga|niyama|anubhaga|anugama|aavaha|svasti|anaapta|sthiti)\\b"
+
+    "colon": {
+      "name": "punctuation.separator.key-value.smriti",
+      "match": ":"
     },
-    "keyword-decl": {
-      "name": "keyword.declaration.smriti",
-      "match": "\\b(paksha|bhumika|adhikara|pramana|sangama|lagna|yuja|ghatana|vrtti|hetu|varna|khanda|pravritti|prativritti)\\b"
-    },
-    "keyword-meta": {
-      "name": "keyword.other.smriti",
-      "match": "\\b(adhipati|aavartana|stara|avadhi|prabhaava|sthala|kshetra|karta|kaarya|aagama|nirgama|samaya)\\b"
-    },
+
     "type": {
+      "comment": "Type names used in field declarations",
       "name": "storage.type.smriti",
       "match": "\\b(sankhya|bhinnaanka|dashaamsha|vakya|tithi|antara|tarka|patra|krama|kosa|vikalpa)\\b"
     },
+
     "constant": {
+      "comment": "Literal values — tarka states and access levels",
       "name": "constant.language.smriti",
       "match": "\\b(satya|asatya|avyakta|public|restricted|private)\\b"
     },
+
     "number": {
       "name": "constant.numeric.smriti",
       "match": "\\b\\d+(\\.\\d+)*\\b"
