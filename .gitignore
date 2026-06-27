@@ -5,3 +5,13 @@ docs/todo.md
 editors/vscode/dist/
 editors/vscode/node_modules/
 editors/vscode/*.vsix
+
+# Environment
+.env
+.env.*
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# OS
+.DS_Store
