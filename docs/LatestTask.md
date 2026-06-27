@@ -33,6 +33,20 @@
   - To wire into Neovim: point nvim-treesitter parser source at `tree-sitter-smriti/`
   - For GitHub Linguist: needs extraction to standalone `BharatOpenSource/tree-sitter-smriti` repo
 
+- [x] Example `.smr` files — three files in `examples/`, all pass `smr check`
+  - `gst-refund-claim.smr` — Indian GST refund process (government workflow), demonstrates:
+    all metadata fields, aagama/nirgama, paksha×3, samaya, apavaada/samapti, vibhaga on tarka,
+    prativritti loop (respond-to-notice loops back to scrutinize), two svasti terminal paths
+    (normal disbursement and CGST Act Section 54(7) deemed-approval path)
+  - `software-release-pipeline.smr` — CI/CD release pipeline, demonstrates:
+    sangama import, paksha×4, anubhaga (3 parallel tracks), anugama join,
+    aavaha qualified sub-process invocation (smoke-tests.run-suite), sthiti wait state,
+    pravritti loop-back to post-incident-review
+  - `smoke-test-suite.smr` — supports the sangama import in the release pipeline
+- [x] Typechecker fix — `collectProduced` was not collecting nirgama from `aavaha` steps;
+    vibhaga on aavaha-produced fields was incorrectly rejected. Two regression tests added.
+- **Test count: 180 (was 178)**
+
 **Next session — starting with:**
 - [ ] #6 Registry resolver — `org/name@version` format for `sangama` imports
 
