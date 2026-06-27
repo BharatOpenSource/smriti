@@ -45,6 +45,8 @@
 
 **Test count: 264 (was 241)**
 
+- [x] tree-sitter: `npx tree-sitter generate` run; parser.c (8468 lines) committed; verified clean
+
 **Remaining:**
 - [ ] `smr fetch` HTTP (blocked on pravaaha)
-- [ ] tree-sitter: run `npx tree-sitter generate` + extract to standalone repo for nvim/Linguist
+- [ ] Extract tree-sitter-smriti/ to standalone repo for nvim/Linguist

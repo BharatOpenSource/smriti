@@ -38,13 +38,12 @@
 
 **Namespacing is scalability.** Flat participant imports break at scale. Qualified names are the only correct design for systems that grow across teams and organizations.
 
-### Semantics — updated 2026-06-27
+### Semantics — updated 2026-06-27 (session 2)
 
-Current implementation covers: metadata, sequential steps, binary/trivalent branching, parallel tracks, sub-process invocation, typed field declarations, cross-file composition, type constraints, evaluatable trigger/descriptor blocks, sutra inheritance with step overrides.
+Current implementation covers: metadata, sequential steps, binary/trivalent branching, parallel tracks, sub-process invocation, typed field declarations, cross-file composition, type constraints (scalar + collection inner types), evaluatable trigger/descriptor blocks, sutra inheritance with step overrides, named variable bindings (varna), per-step error/timeout data.
 
 **Remaining gaps:**
-- No per-step error paths beyond `apavaada` — no error *data* flows to handler
-- No samaya escalation — SLA declared but no runtime scheduling
+- No runtime scheduling — hetu declares a schedule but nothing executes it
 - No registry resolver HTTP fetch — blocked on pravaaha shipping `smr fetch` HTTP endpoint
 - No formal output validation — nirgama values are declared but not runtime-checked
 
@@ -66,13 +65,46 @@ Current implementation covers: metadata, sequential steps, binary/trivalent bran
 - Same-file and cross-file (qualified name) parents both supported
 - `aadesha` inner pada has no `iti` name — it's a replacement body, not a new named step
 
+### varna — decided 2026-06-27
+
+- `varna name : type [= expression]` — named data binding in the flow
+- Produces a field with the given name and type; available to all subsequent flow items (vibhaga, pada, etc.)
+- With `= expression`: computed from existing produced fields (e.g., `varna is-eligible : tarka = age >= 18 && income > 0`)
+- Without expression: unbound typed slot — bound by runtime context or step output
+- Identifiers in expr follow expression rules (no aagama constraint — it's not vrtti)
+
+### per-step error/timeout data — decided 2026-06-27
+
+- `apavaada: field (type), ...` on a `pada` — data the step produces when routing via apavaada
+- `samapti: field (type), ...` on a `pada` — data the step produces when routing via samapti (timeout)
+- Disambiguated from routing by colon (data) vs arrow (routing): both can appear on the same pada
+- Typechecker validates: data fields must be well-typed; data without routing is an error
+- Handler step's `aagama` should cover these fields (not yet enforced — cross-step validation is future work)
+
+### krama/kosa inner type constraints — decided 2026-06-27
+
+- Inner types in `krama[T]` and `kosa[K, V]` fully support constraints — parser was already recursive
+- `krama[sankhya 0..100]`, `kosa[vakya, sankhya 0..1000]`, `krama[vakya "[A-Z]+"]` all valid
+- `checkTypeConstraints()` is a module-level recursive function applied to all type positions
+- smriti-level and sutra-level `aagama`/`nirgama` are now fully validated (was missing before)
+
+### sutra compile target — decided 2026-06-27
+
+- `smr compile <sutra-file>` emits YAML interface document: id, kind, version, owner, aagama, nirgama, steps
+- Backend: `src/backends/sutra-yaml.ts` → `toSutraYaml(SutraDecl)`
+- Intended use: publish the interface of a `.sut` for consumers who want to know its contract
+
 ## Open Questions / Tasks
 
-- [x] Cross-file resolution: `sangama` resolver implemented — `RelativeFileResolver`, `RegistryResolver` stub, namespacing, circular import detection
-- [x] Type constraints: `sankhya` range (`0..100`), `vakya` pattern (`"[A-Z0-9]+"`)
+- [x] Cross-file resolution: `sangama` resolver, `RelativeFileResolver`, `RegistryResolver` stub
+- [x] Type constraints: `sankhya` range, `vakya` pattern, `krama`/`kosa` inner type constraints
 - [x] `ghatana` semantics: evaluatable trigger block, `smr trigger` CLI command
 - [x] `sutra anuvṛtti`: inheritance + `aadesha` step override
-- [ ] Registry HTTP fetch — `smr fetch <uri>` without `--from` (blocked on pravaaha)
-- [ ] Per-step error data flow — `apavaada` step receives no typed error data yet
-- [ ] Samaya escalation — SLA timeout routing beyond `samapti → step`
-- [ ] Formal grammar sync — `spec/grammar.ebnf` needs update for ghatana/anuvrtti/aadesha
+- [x] `varna`: named binding in flow, produces typed field
+- [x] Per-step error/timeout data: `apavaada: fields` / `samapti: fields`
+- [x] Grammar spec v0.3: all features documented in `spec/grammar.ebnf`
+- [x] Sutra compile target: `smr compile` works on `.sut` files
+- [x] Tree-sitter v0.3: grammar.js + parser.c regenerated; highlights updated
+- [ ] Registry HTTP fetch — blocked on pravaaha
+- [ ] Cross-step error data validation — handler `aagama` vs source `apavaada:` not yet enforced
+- [ ] Runtime scheduling — hetu schedule is declared, not executed
