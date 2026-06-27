@@ -307,6 +307,7 @@ class Parser {
     let samaya: Duration | undefined
     let khanda: Expression | undefined
     let viparyaya: string | undefined
+    let kalaatigata: string | undefined
     let routing: PravrttiDecl | PrativrttiDecl | undefined
 
     while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
@@ -330,6 +331,14 @@ class Parser {
         } else {
           viparyaya = this.eat(TokenKind.IDENTIFIER, 'viparyaya target').value
         }
+      } else if (this.tryEat(TokenKind.KALAATIGATA)) {
+        this.eat(TokenKind.ARROW)
+        const kt = this.peek()
+        if (kt.kind === TokenKind.SVASTI || kt.kind === TokenKind.ANAAPTA) {
+          kalaatigata = this.advance().value
+        } else {
+          kalaatigata = this.eat(TokenKind.IDENTIFIER, 'kalaatigata target').value
+        }
       } else if (this.check(TokenKind.PRAVRITTI)) {
         const p = this.pos(); this.advance(); this.eat(TokenKind.COLON)
         routing = { kind: 'pravritti', target: this.eat(TokenKind.IDENTIFIER).value, pos: p }
@@ -341,7 +350,7 @@ class Parser {
 
     this.eat(TokenKind.RBRACE, `pada '${name}'`)
     const itiName = this.tryEatIti()
-    return { kind: 'pada', name, itiName, karta, kaarya, aagama, nirgama, samaya, khanda, viparyaya, routing, pos }
+    return { kind: 'pada', name, itiName, karta, kaarya, aagama, nirgama, samaya, khanda, viparyaya, kalaatigata, routing, pos }
   }
 
   private parseDuration(): Duration {

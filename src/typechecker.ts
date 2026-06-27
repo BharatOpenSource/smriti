@@ -314,6 +314,23 @@ class Checker {
       }
     }
 
+    // kalaatigata: SLA timeout routing requires samaya on the same step
+    if (pada.kalaatigata !== undefined) {
+      if (!pada.samaya) {
+        this.fail(
+          `kalaatigata declared on '${pada.name}' but no samaya (SLA) is set — timeout routing requires a time limit`,
+          pada.pos,
+        )
+      }
+      const kt = pada.kalaatigata
+      if (kt !== 'svasti' && kt !== 'anaapta' && !stepNames.has(kt)) {
+        this.fail(
+          `kalaatigata target '${kt}' does not exist in this pravah`,
+          pada.pos,
+        )
+      }
+    }
+
     // pravritti / prativritti targets must exist
     if (pada.routing) {
       const target = pada.routing.target

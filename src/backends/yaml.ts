@@ -130,6 +130,10 @@ function buildStep(
     step.on_error = pada.viparyaya
   }
 
+  if (pada.kalaatigata !== undefined) {
+    step.on_timeout = pada.kalaatigata
+  }
+
   if (pada.khanda) {
     step.precondition = exprStr(pada.khanda)
   }
