@@ -38,24 +38,41 @@
 
 **Namespacing is scalability.** Flat participant imports break at scale. Qualified names are the only correct design for systems that grow across teams and organizations.
 
-### Semantics — in progress 2026-06-27
+### Semantics — updated 2026-06-27
 
-Current implementation covers: metadata, sequential steps, binary/trivalent branching, parallel tracks, sub-process invocation, typed field declarations, cross-file composition.
+Current implementation covers: metadata, sequential steps, binary/trivalent branching, parallel tracks, sub-process invocation, typed field declarations, cross-file composition, type constraints, evaluatable trigger/descriptor blocks, sutra inheritance with step overrides.
 
-**Known gaps (design choices to make, not bugs):**
-- No expression language — `niyama` only matches literal values, not computed conditions
-- No formal data flow — aagama/nirgama names not verified to connect between steps
-- No constraints on types (e.g., `sankhya` with a range, `vakya` with a pattern)
-- No per-step error paths — only global `anaapta`
-- No samaya escalation — SLA declared but no routing on timeout
-- No sutra inheritance (anuvṛtti) — `.sut` files can be invoked but not extended
-- Trigger (`ghatana`) is descriptive only — no evaluatable schedule or event condition
+**Remaining gaps:**
+- No per-step error paths beyond `apavaada` — no error *data* flows to handler
+- No samaya escalation — SLA declared but no runtime scheduling
+- No registry resolver HTTP fetch — blocked on pravaaha shipping `smr fetch` HTTP endpoint
+- No formal output validation — nirgama values are declared but not runtime-checked
+
+### ghatana semantics — decided 2026-06-27
+
+- `ghatana` block has five optional fields: `vrtti`, `hetu`, `karta`, `sthala`, `kaarya`
+- `vrtti` — boolean expression evaluated against smriti aagama fields; identifiers must be aagama names; determines whether process fires
+- `hetu` — schedule: `prati N <unit>` where unit is user-defined (any word: `antara`, `day`, `submission`, etc.)
+- `karta`, `sthala`, `kaarya` — informational context; identifiers unconstrained (may name participants, be string literals, or reference aagama data)
+- All five fields are evaluatable expressions — `smr trigger <file> --payload <json>` evaluates and prints all
+- `smr trigger` exits 0 when vrtti is satya (or absent), exits 1 when vrtti is asatya or avyakta
+
+### sutra anuvṛtti — decided 2026-06-27
+
+- `anuvrtti` (Pāṇinian carryover) — keyword declaring parent sutra: `sutra child anuvrtti base { ... }`
+- `aadesha` (Pāṇinian substitute, आदेश) — replaces a named parent step: `aadesha step-name { ... body ... }`
+  - Chose `aadesha` over `pratipada` (counter-step) — Pāṇinian term for substitution is more precise
+- Delta model: child declares additional aagama/nirgama; aadesha replaces a parent step's body; new steps append before terminals
+- Same-file and cross-file (qualified name) parents both supported
+- `aadesha` inner pada has no `iti` name — it's a replacement body, not a new named step
 
 ## Open Questions / Tasks
 
 - [x] Cross-file resolution: `sangama` resolver implemented — `RelativeFileResolver`, `RegistryResolver` stub, namespacing, circular import detection
-- [ ] Semantics: expression language, formal data flow, per-step error paths, samaya escalation
-- [ ] Indic script rendering: canonical display script (Devanagari recommended)
-- [ ] Tree-sitter grammar for highlighting (after LSP stable)
-- [ ] Registry resolver: actual implementation of `org/name@version` format
-- [ ] `aavaha` qualified names: invoking an imported sub-process via `gov.pan-verification`
+- [x] Type constraints: `sankhya` range (`0..100`), `vakya` pattern (`"[A-Z0-9]+"`)
+- [x] `ghatana` semantics: evaluatable trigger block, `smr trigger` CLI command
+- [x] `sutra anuvṛtti`: inheritance + `aadesha` step override
+- [ ] Registry HTTP fetch — `smr fetch <uri>` without `--from` (blocked on pravaaha)
+- [ ] Per-step error data flow — `apavaada` step receives no typed error data yet
+- [ ] Samaya escalation — SLA timeout routing beyond `samapti → step`
+- [ ] Formal grammar sync — `spec/grammar.ebnf` needs update for ghatana/anuvrtti/aadesha
