@@ -1,30 +1,22 @@
-# Latest Task — Sutra
+# Latest Task — Smriti
 
 > Rolling log. Current session only — 1-2 sessions max. 200-line limit.
 
-## Session: 2026-06-27
+## Session: 2026-06-27 (continued)
 
-**Status:** Vocabulary locked. 47 terms coined across structural, flow, data, and type categories. All recorded in ConvoQA.md.
+**Status:** Toolchain active. Parser, typechecker, YAML/SVG backends, LSP, VS Code extension all shipped. Semantics track complete for this sprint.
 
 **Completed this session:**
-- [x] Full vocabulary audit — expanded from 29 to 47 terms across 4 categories
-- [x] All terms coined and locked (see ConvoQA.md — Vocabulary section)
-- [x] tarka type: trivalent logic with satya / asatya / avyakta
-- [x] avyakta: indeterminate third state — neither true nor false; unresolved/pending/error
+- [x] Sangama resolver — cross-file composition via `sangama gov { yuja: "./file.smr" }`
+- [x] Expression language — full recursive descent: `&&`, `||`, `!`, `==`, `!=`, `<`, `>`, `<=`, `>=`
+- [x] Formal data flow — aagama/nirgama connectivity validation across steps; smriti-level process inputs
+- [x] `apavaada` (अपवाद) — per-step exception routing: `apavaada → handler-step`
+- [x] `samapti` (समाप्ति) — SLA timeout routing: `samapti → escalate` (requires `samaya` on same step)
+- [x] Keyword renames: viparyaya → apavaada, kalaatigata → samapti (full rename across all files)
+- [x] 136 tests passing across 11 test files
 
-**Completed last session (2026-06-26):**
-- [x] Language name: Smriti (स्मृति), file: `.smr`
-- [x] Atomic unit: Sutra (सूत्र), file: `.sut`
-- [x] Multi-script: Sanskrit vocabulary, ICU transliteration, any script in source
-- [x] Grammar approach: grammar-first (PEG / Tree-sitter)
-- [x] Full computation: grammar must support from day one
-- [x] Renderer: inside toolchain, YAML first, SVG next
-- [x] Compilation chain: YAML → SVG → WASM → LLVM/native
-- [x] indic-os: Smriti as policy/config/scripting base
+**Next session — starting with:**
+- [ ] #1: Grammar spec sync — `spec/grammar.ebnf` is stale (predates last 3 semantics sessions)
+- [ ] #2: `aavaha` qualified names — `aavaha gov.pan-verification` to invoke imported sub-process
 
----
-
-## Next:
-- [ ] Decide PEG vs Tree-sitter
-- [ ] Create GitHub repo for Smriti/Sutra
-- [ ] Draft formal grammar using locked vocabulary (see ConvoQA.md)
+**Full pending list:** see `docs/todo.md`

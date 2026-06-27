@@ -1,5 +1,6 @@
 node_modules/
 dist/
+docs/todo.md
 *.js.map
 editors/vscode/dist/
 editors/vscode/node_modules/
