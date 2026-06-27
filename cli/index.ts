@@ -6,6 +6,7 @@ import { typecheck } from '../src/typechecker.js'
 import { resolveImports, parseRegistryUri, registryCachePath } from '../src/resolver.js'
 import { toYaml } from '../src/backends/yaml.js'
 import { toSvg, type Script } from '../src/backends/svg.js'
+import { evaluateGhatana, type Payload } from '../src/evaluator.js'
 
 const VERSION = '0.1.0'
 
@@ -18,6 +19,7 @@ Usage:
   smr compile --svg <file.smr>                 Compile to SVG flow diagram
   smr compile --svg --script devanagari <file> SVG with Devanagari labels
   smr compile --out <path> <file.smr>          Write output to file
+  smr trigger <file.smr> --payload <json>      Evaluate ghatana against a payload
   smr fetch <org/name@version>                 Prime local registry cache
   smr fetch <org/name@version> --from <file>   Cache a local file as a registry entry
 
@@ -38,14 +40,17 @@ const outIdx    = args.indexOf('--out')
 const outPath   = outIdx !== -1 ? args[outIdx + 1] : null
 const scriptIdx = args.indexOf('--script')
 const scriptArg = scriptIdx !== -1 ? args[scriptIdx + 1] : null
-const fromIdx   = args.indexOf('--from')
-const fromArg   = fromIdx !== -1 ? args[fromIdx + 1] : null
+const fromIdx    = args.indexOf('--from')
+const fromArg    = fromIdx !== -1 ? args[fromIdx + 1] : null
+const payloadIdx = args.indexOf('--payload')
+const payloadArg = payloadIdx !== -1 ? args[payloadIdx + 1] : null
 
-const keyValueFlags = new Set(['--out', '--script', '--from'])
+const keyValueFlags = new Set(['--out', '--script', '--from', '--payload'])
 const valuePositions = new Set<number>()
-if (outIdx !== -1)    valuePositions.add(outIdx + 1)
-if (scriptIdx !== -1) valuePositions.add(scriptIdx + 1)
-if (fromIdx !== -1)   valuePositions.add(fromIdx + 1)
+if (outIdx !== -1)     valuePositions.add(outIdx + 1)
+if (scriptIdx !== -1)  valuePositions.add(scriptIdx + 1)
+if (fromIdx !== -1)    valuePositions.add(fromIdx + 1)
+if (payloadIdx !== -1) valuePositions.add(payloadIdx + 1)
 
 const flags = new Set(args.filter((a, i) =>
   a.startsWith('--') && !keyValueFlags.has(a) && !valuePositions.has(i)
@@ -125,6 +130,44 @@ function run() {
       output(toYaml(decl))
     }
     return
+  }
+
+  if (command === 'trigger') {
+    const file = files[0]
+    if (!file) { console.error('Usage: smr trigger <file.smr> [--payload <json>]'); process.exit(1) }
+    const source = readSource(file)
+    let ast
+    try {
+      const abs = resolve(file)
+      const parsed = parse(source)
+      const context = resolveImports(parsed, abs)
+      ast = typecheck(parsed, context)
+    } catch (e) {
+      console.error(String(e)); process.exit(1)
+    }
+    const decl = ast.decls.find(d => d.kind === 'smriti')
+    if (!decl || decl.kind !== 'smriti') {
+      console.error('smr trigger: no smriti declaration found'); process.exit(1)
+    }
+    if (!decl.trigger) {
+      console.log('(no ghatana declared — process fires unconditionally)')
+      process.exit(0)
+    }
+    let payload: Payload = {}
+    if (payloadArg) {
+      try { payload = JSON.parse(payloadArg) as Payload }
+      catch { console.error('smr trigger: --payload must be valid JSON'); process.exit(1) }
+    }
+    const result = evaluateGhatana(decl.trigger, payload)
+    if (result.vrtti  !== undefined) console.log(`vrtti:  ${result.vrtti}`)
+    if (result.karta  !== undefined) console.log(`karta:  ${JSON.stringify(result.karta)}`)
+    if (result.sthala !== undefined) console.log(`sthala: ${JSON.stringify(result.sthala)}`)
+    if (result.kaarya !== undefined) console.log(`kaarya: ${JSON.stringify(result.kaarya)}`)
+    if (decl.trigger.hetu) {
+      console.log(`hetu:   prati ${decl.trigger.hetu.quantity} ${decl.trigger.hetu.unit}`)
+    }
+    console.log(result.fires ? '→ process fires' : '→ process does not fire')
+    process.exit(result.fires ? 0 : 1)
   }
 
   if (command === 'fetch') {

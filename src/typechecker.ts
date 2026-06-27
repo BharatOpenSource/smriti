@@ -2,7 +2,7 @@ import type {
   SmritiFile, SmritiDecl, SutraDecl,
   FlowDecl, FlowItem, PadaDecl, VibhagaDecl,
   TypedField, SmritiType, Pos,
-  Expression,
+  Expression, GhatanaDecl,
 } from './ast.js'
 import { nameRefStr } from './ast.js'
 import type { ResolveContext } from './resolver.js'
@@ -48,14 +48,48 @@ class Checker {
     // Smriti-level aagama are process inputs from the caller — pre-seeded as produced.
     const externalInputs = new Map<string, SmritiType>()
     if (decl.aagama) for (const f of decl.aagama) externalInputs.set(f.name, f.type)
+    if (decl.trigger) this.checkGhatana(decl.trigger, externalInputs)
     if (decl.flow) this.checkFlow(decl.flow, participantNames, externalInputs)
+  }
+
+  private checkGhatana(ghatana: GhatanaDecl, aagamaFields: Map<string, SmritiType>) {
+    const aagamaNames = new Set(aagamaFields.keys())
+    const checkGhatanaExpr = (expr: Expression, fieldName: string) => {
+      this.checkExpression(expr)
+      // identifiers in ghatana expressions must refer to aagama field names
+      const checkIds = (e: Expression): void => {
+        if (e.kind === 'identifier' && !aagamaNames.has(e.name)) {
+          this.fail(
+            `ghatana ${fieldName}: '${e.name}' is not an aagama field — ` +
+            `available: ${[...aagamaNames].join(', ') || '(none)'}`,
+            e.pos,
+          )
+        }
+        if (e.kind === 'compare' || e.kind === 'logical') {
+          checkIds(e.left); checkIds(e.right)
+        }
+        if (e.kind === 'not') checkIds(e.operand)
+      }
+      checkIds(expr)
+    }
+    if (ghatana.vrtti)  checkGhatanaExpr(ghatana.vrtti,  'vrtti')
+    // karta/sthala/kaarya are descriptive context, not data predicates —
+    // identifiers may refer to participants or literals; no aagama constraint.
+    if (ghatana.karta)  this.checkExpression(ghatana.karta)
+    if (ghatana.sthala) this.checkExpression(ghatana.sthala)
+    if (ghatana.kaarya) this.checkExpression(ghatana.kaarya)
   }
 
   private checkSutra(decl: SutraDecl) {
     this.checkIti(decl.name, decl.itiName, decl.pos)
-    this.checkFlow(decl.flow, new Set())
     if (decl.aagama) this.checkTypedFields(decl.aagama)
     if (decl.nirgama) this.checkTypedFields(decl.nirgama)
+    // aadesha steps must reference a pada that exists in the flow (no parent context here —
+    // full inheritance check runs only when the merged sutra is assembled by the resolver).
+    for (const item of decl.flow.items) {
+      if (item.kind === 'aadesha') this.checkPada(item.pada, new Set(), new Set())
+    }
+    this.checkFlow(decl.flow, new Set())
   }
 
   // ─── Expression types ─────────────────────────────────────────────────────
@@ -181,6 +215,9 @@ class Checker {
       if (item.kind === 'pada') {
         for (const f of item.nirgama) map.set(f.name, f.type)
       }
+      if (item.kind === 'aadesha') {
+        for (const f of item.pada.nirgama) map.set(f.name, f.type)
+      }
       if (item.kind === 'aavaha') {
         for (const f of item.nirgama) map.set(f.name, f.type)
       }
@@ -245,6 +282,7 @@ class Checker {
     const collect = (items: FlowItem[]) => {
       for (const item of items) {
         if (item.kind === 'pada')    names.add(item.name)
+        if (item.kind === 'aadesha') names.add(item.target)  // aadesha counts as that step name
         if (item.kind === 'sthiti') names.add(item.name)
         if (item.kind === 'anubhaga') {
           for (const track of item.tracks) collect(track)
@@ -273,6 +311,7 @@ class Checker {
   private checkFlowItem(item: FlowItem, stepNames: Set<string>, participants: Set<string>) {
     switch (item.kind) {
       case 'pada':     return this.checkPada(item, stepNames, participants)
+      case 'aadesha':  return this.checkPada(item.pada, stepNames, participants)
       case 'vibhaga':  return this.checkVibhaga(item, stepNames)
       case 'anubhaga': {
         for (const track of item.tracks) {

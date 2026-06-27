@@ -48,9 +48,10 @@ export interface SutraDecl extends Node {
   name: string
   itiName?: string
   metadata: Metadata
-  aagama?: TypedField[]
-  flow: FlowDecl
-  nirgama?: TypedField[]
+  parent?: NameRef        // anuvṛtti — inherits from this sutra
+  aagama?: TypedField[]   // additional aagama (merged with parent's)
+  flow: FlowDecl          // delta: aadesha overrides + new steps + terminals
+  nirgama?: TypedField[]  // additional nirgama (merged with parent's)
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
@@ -99,17 +100,17 @@ export interface PakshaDecl extends Node {
 
 export interface GhatanaDecl extends Node {
   kind: 'ghatana'
-  items: (VrttiDecl | HetuDecl)[]
+  vrtti?:  Expression     // tarka condition — evaluated against aagama payload
+  hetu?:   HetuSchedule   // structured schedule
+  karta?:  Expression     // who triggers (informational)
+  sthala?: Expression     // where (informational)
+  kaarya?: Expression     // what action (informational)
 }
 
-export interface VrttiDecl extends Node {
-  kind: 'vrtti'
-  description: string
-}
-
-export interface HetuDecl extends Node {
-  kind: 'hetu'
-  description: string
+export interface HetuSchedule extends Node {
+  kind: 'hetu-schedule'
+  quantity: number
+  unit: string   // user-defined unit — antara, requests, batches, etc.
 }
 
 // ─── Flow ─────────────────────────────────────────────────────────────────────
@@ -121,6 +122,7 @@ export interface FlowDecl extends Node {
 
 export type FlowItem =
   | PadaDecl
+  | AadeshaDecl
   | VibhagaDecl
   | AnubhagaDecl
   | AnugamaDecl
@@ -128,6 +130,14 @@ export type FlowItem =
   | SthitiDecl
   | { kind: 'svasti'; pos: Pos }
   | { kind: 'anaapta'; pos: Pos }
+
+// ─── aadesha (Pāṇinian substitute — replaces a parent sutra's named step) ─────
+
+export interface AadeshaDecl extends Node {
+  kind: 'aadesha'
+  target: string   // name of the parent pada being replaced
+  pada: PadaDecl   // the replacement step definition
+}
 
 // ─── Step ─────────────────────────────────────────────────────────────────────
 

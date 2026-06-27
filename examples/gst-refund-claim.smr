@@ -30,8 +30,11 @@ smriti gst-refund-claim {
   }
 
   ghatana {
-    vrtti: "Taxpayer submits refund application on the GST portal"
-    hetu:  "Excess Input Tax Credit accumulation or export-related refund eligibility"
+    vrtti:  gstin != "" && refund-category != ""
+    hetu:   prati 1 submission
+    karta:  taxpayer
+    sthala: "GST Portal"
+    kaarya: "Submit Form RFD-01"
   }
 
   pravah {

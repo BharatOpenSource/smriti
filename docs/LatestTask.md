@@ -4,64 +4,35 @@
 
 ## Session: 2026-06-27
 
-**Status:** Toolchain active. 178 tests passing across 13 test files. #1–#5 complete and pushed.
+**Status:** Toolchain active. 241 tests passing across 16 test files. #1–#9 complete.
 
 **Completed this session:**
-- [x] `apavaada` (अपवाद) — per-step exception routing: `apavaada → handler-step`
-- [x] `samapti` (समाप्ति) — SLA timeout routing; requires `samaya` on same step
-- [x] Keyword renames: viparyaya → apavaada, kalaatigata → samapti (full rename)
-- [x] #1 Grammar spec sync — `spec/grammar.ebnf` rewritten to v0.2; fully in sync with parser
-- [x] #2 `aavaha` qualified names — `aavaha gov.pan-verification` for imported sub-process invocation
-- [x] #3 Typechecking gaps — `anugama` validation, parallel track data flow context, terminal check fix
-- [x] #4 Indic script rendering — `src/scripts.ts` label tables; `toSvg(decl, { script: 'devanagari' })`
-  - CLI: `smr compile --svg --script devanagari file.smr`
-  - 9 labels mapped to Devanagari; font-family switches to Noto Sans Devanagari stack
-  - metaLine offset widens 48→80 px for wider Devanagari glyphs
-- [x] #5 Tree-sitter grammar — `tree-sitter-smriti/` directory added to repo
-  - `grammar.js` — full grammar authored in tree-sitter DSL, mirrors `spec/grammar.ebnf` v0.2
-  - `src/parser.c` — 184K generated C parser committed (zero-install for editors)
-  - `queries/highlights.scm` — nvim-treesitter highlight groups mapped for all node types
-  - All constructs covered: smriti/sutra, metadata, paksha, sangama/lagna, pravah, pada,
-    apavaada, samapti, vibhaga/niyama, anubhaga/anugama, aavaha, sthiti, expressions
-  - Two key grammar fixes during generation:
-    1. Body rules (`smriti_body`, `pada_body`, etc.) use `optional($.body)` at parent +
-       `repeat1()` inside — tree-sitter forbids syntactic rules matching empty string
-    2. Removed unnecessary `conflicts` declaration — tree-sitter resolved `name_ref`
-       (qualified vs bare identifier) automatically via lookahead
-  - Verified: `tree-sitter parse tests/sample-test.smr` produces clean parse tree, no errors
-  - Bindings scaffolded for Node, Python, Rust, Go, Swift, C by `tree-sitter generate`
-  - To wire into Neovim: point nvim-treesitter parser source at `tree-sitter-smriti/`
-  - For GitHub Linguist: needs extraction to standalone `BharatOpenSource/tree-sitter-smriti` repo
 
-- [x] Example `.smr` files — three files in `examples/`, all pass `smr check`
-  - `gst-refund-claim.smr` — Indian GST refund process (government workflow), demonstrates:
-    all metadata fields, aagama/nirgama, paksha×3, samaya, apavaada/samapti, vibhaga on tarka,
-    prativritti loop (respond-to-notice loops back to scrutinize), two svasti terminal paths
-    (normal disbursement and CGST Act Section 54(7) deemed-approval path)
-  - `software-release-pipeline.smr` — CI/CD release pipeline, demonstrates:
-    sangama import, paksha×4, anubhaga (3 parallel tracks), anugama join,
-    aavaha qualified sub-process invocation (smoke-tests.run-suite), sthiti wait state,
-    pravritti loop-back to post-incident-review
-  - `smoke-test-suite.smr` — supports the sangama import in the release pipeline
-- [x] Typechecker fix — `collectProduced` was not collecting nirgama from `aavaha` steps;
-    vibhaga on aavaha-produced fields was incorrectly rejected. Two regression tests added.
-- **Test count: 180 (was 178)**
+- [x] #8 `ghatana` semantics — evaluatable trigger/descriptor block on smriti
+  - AST restructured: `GhatanaDecl` has optional fields `vrtti`, `hetu`, `karta`, `sthala`, `kaarya`
+  - `vrtti` — boolean expression evaluated against payload (identifiers = aagama field names)
+  - `hetu` — schedule: `prati N <unit>` (user-defined unit; `antara`, `day`, `submission`, etc.)
+  - `karta`, `sthala`, `kaarya` — informational expressions (unconstrained identifiers — may be participants or literals)
+  - New module `src/evaluator.ts`: `evaluate(expr, payload)`, `toTarka(value)`, `evaluateGhatana(ghatana, payload)`
+  - Typechecker `checkGhatana()`: validates vrtti identifiers against smriti aagama; other fields expression-checked only
+  - CLI: `smr trigger <file> --payload <json>` — evaluates ghatana, prints all field results, exits 0/1 on fires/no-fires
+  - `src/backends/svg.ts` — ghatana header line updated (removed old `.items[0]` reference)
+  - 34 new tests in `tests/ghatana.test.ts` (parsing, typechecking, evaluator, toTarka, evaluateGhatana)
 
-- [x] #6 Registry resolver — `org/name@version` sangama imports with local cache
-  - `parseRegistryUri()` + `registryCachePath()` exported from `src/resolver.ts`
-  - `RegistryResolver` checks `~/.smr/registry/<org>/<name>/<version>.smr`; injectable `cacheRoot` for tests
-  - `smr fetch <uri>`: no `--from` → explains + shows path; `--from <file>` → validates + writes to cache
-  - HTTP fetch is the only remaining seam; plugs in when pravaaha ships
-  - **Test count: 189 (was 180)**
+- [x] #9 `sutra anuvṛtti` — sutra inheritance with Pāṇinian override semantics
+  - Lexer: `anuvrtti`, `aadesha` added as keywords
+  - AST: `SutraDecl.parent?: NameRef`, `AadeshaDecl` (kind: 'aadesha', target: string, pada: PadaDecl) added to FlowItem
+  - Parser: `parseSutra()` checks for `anuvrtti` after name; `parsePadaBody()` extracted (shared by parsePada + parseAadesha); `parseAadesha()` added
+  - Typechecker: aadesha treated as its pada in flow + collectProduced; collectStepNames tracks aadesha targets
+  - `hetu` unit parsing fix: keywords (like `antara`) accepted as unit names (not restricted to IDENTIFIER)
+  - 6 new tests in `tests/inheritance.test.ts` (anuvṛtti parsing, aadesha parsing, typechecking)
 
-- [x] #7 Type constraints — `sankhya` range + `vakya` pattern
-  - Syntax: `amount (sankhya 0..100)`, `age (sankhya 18..)`, `pct (sankhya ..100)`, `gstin (vakya "[A-Z0-9]{15}")`
-  - New `DOTDOT` token; AST stores `min?/max?` on sankhya, `pattern?` on vakya
-  - Typechecker: min ≤ max enforced, regex pattern validated; type compat still kind-only
-  - 18 new tests in `tests/constraints.test.ts`, 207 total
-- **Test count: 207 (was 189)**
+- [x] Example files updated to use expression-based ghatana syntax
+  - `gst-refund-claim.smr`: `vrtti: gstin != "" && refund-category != ""`, hetu/karta/sthala/kaarya set
+  - `software-release-pipeline.smr`: `vrtti: service-name != "" && version-tag != ""`, same fields
 
-**Next session — starting with:**
-- [ ] #8 `ghatana` semantics — evaluatable trigger expressions
+**Test count: 241 (was 207)**
+
+**All pending from #8/#9 design discussion — complete.**
 
 **Full pending list:** see `docs/todo.md`

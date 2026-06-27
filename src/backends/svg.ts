@@ -130,7 +130,7 @@ function headerBox(decl: SmritiDecl, y: number): string {
     text(CX, y + 34, decl.name, C.hdrText, 20, 'bold'),
     text(CX, y + 58, subtitle, '#A0AEC0', 12),
     decl.trigger
-      ? text(CX, y + 78, `⚡ ${decl.trigger.items[0]?.description ?? 'triggered'}`, '#7EC8E3', 11)
+      ? text(CX, y + 78, `⚡ triggered`, '#7EC8E3', 11)
       : '',
   ].join('\n')
 }

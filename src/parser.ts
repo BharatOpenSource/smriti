@@ -2,7 +2,7 @@ import { lex, TokenKind, type Token } from './lexer.js'
 import type {
   SmritiFile, SmritiDecl, SutraDecl,
   Metadata, ReferenceDecl, SangamaDecl, LagnaDecl,
-  PakshaDecl, GhatanaDecl, VrttiDecl, HetuDecl,
+  PakshaDecl, GhatanaDecl, HetuSchedule, AadeshaDecl,
   FlowDecl, FlowItem, PadaDecl, Duration,
   VibhagaDecl, NiyamaClause, AnubhagaDecl, AnugamaDecl,
   AavahaDecl, SthitiDecl, TypedField, SmritiType,
@@ -111,6 +111,7 @@ class Parser {
     const pos = this.pos()
     this.eat(TokenKind.SUTRA)
     const name = this.eat(TokenKind.IDENTIFIER, 'sutra declaration').value
+    const parent = this.tryEat(TokenKind.ANUVRTTI) ? this.parseNameRef() : undefined
     this.eat(TokenKind.LBRACE, `sutra '${name}'`)
 
     const metadata = this.parseMetadata()
@@ -124,7 +125,7 @@ class Parser {
 
     this.eat(TokenKind.RBRACE, `sutra '${name}'`)
     const itiName = this.tryEatIti()
-    return { kind: 'sutra', name, itiName, metadata, aagama, flow, nirgama, pos }
+    return { kind: 'sutra', name, itiName, metadata, parent, aagama, flow, nirgama, pos }
   }
 
   // ─── Metadata ───────────────────────────────────────────────────────────────
@@ -241,25 +242,40 @@ class Parser {
     const pos = this.pos()
     this.eat(TokenKind.GHATANA)
     this.eat(TokenKind.LBRACE, 'ghatana')
-    const items: (VrttiDecl | HetuDecl)[] = []
+
+    let vrtti:  Expression    | undefined
+    let hetu:   HetuSchedule  | undefined
+    let karta:  Expression    | undefined
+    let sthala: Expression    | undefined
+    let kaarya: Expression    | undefined
+
     while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
-      if (this.check(TokenKind.VRTTI)) {
-        const p = this.pos(); this.advance(); this.eat(TokenKind.COLON)
-        items.push({ kind: 'vrtti', description: this.parseDescription(), pos: p })
-      } else if (this.check(TokenKind.HETU)) {
-        const p = this.pos(); this.advance(); this.eat(TokenKind.COLON)
-        items.push({ kind: 'hetu', description: this.parseDescription(), pos: p })
+      if (this.tryEat(TokenKind.VRTTI)) {
+        this.eat(TokenKind.COLON, 'vrtti'); vrtti = this.parseExpression()
+      } else if (this.tryEat(TokenKind.HETU)) {
+        this.eat(TokenKind.COLON, 'hetu')
+        const hp = this.pos()
+        this.eat(TokenKind.PRATI, 'hetu schedule — expected: prati N <unit>')
+        const quantity = parseFloat(this.eat(TokenKind.NUMBER, 'hetu schedule quantity').value)
+        // unit is user-defined — accept any word token (keywords like 'antara' are valid units)
+        const unitTok = this.peek()
+        if (unitTok.kind !== TokenKind.IDENTIFIER && !unitTok.value.match(/^[a-zA-Z]/)) {
+          throw new ParseError(`Expected unit name in hetu schedule, got '${unitTok.value || unitTok.kind}'`, unitTok.pos)
+        }
+        this.advance()
+        const unit = unitTok.value
+        hetu = { kind: 'hetu-schedule', quantity, unit, pos: hp }
+      } else if (this.tryEat(TokenKind.KARTA)) {
+        this.eat(TokenKind.COLON, 'karta'); karta = this.parseExpression()
+      } else if (this.tryEat(TokenKind.STHALA)) {
+        this.eat(TokenKind.COLON, 'sthala'); sthala = this.parseExpression()
+      } else if (this.tryEat(TokenKind.KAARYA)) {
+        this.eat(TokenKind.COLON, 'kaarya'); kaarya = this.parseExpression()
       } else break
     }
-    this.eat(TokenKind.RBRACE, 'ghatana')
-    return { kind: 'ghatana', items, pos }
-  }
 
-  private parseDescription(): string {
-    if (this.check(TokenKind.STRING)) return this.advance().value
-    let desc = this.eat(TokenKind.IDENTIFIER).value
-    while (this.check(TokenKind.IDENTIFIER)) desc += ' ' + this.advance().value
-    return desc
+    this.eat(TokenKind.RBRACE, 'ghatana')
+    return { kind: 'ghatana', vrtti, hetu, karta, sthala, kaarya, pos }
   }
 
   // ─── Flow ───────────────────────────────────────────────────────────────────
@@ -280,6 +296,7 @@ class Parser {
     const t = this.peek()
     switch (t.kind) {
       case TokenKind.PADA:      return this.parsePada()
+      case TokenKind.AADESHA:   return this.parseAadesha()
       case TokenKind.VIBHAGA:   return this.parseVibhaga()
       case TokenKind.ANUBHAGA:  return this.parseAnubhaga()
       case TokenKind.ANUGAMA:   return this.parseAnugama()
@@ -292,6 +309,17 @@ class Parser {
     }
   }
 
+  private parseAadesha(): AadeshaDecl {
+    const pos = this.pos()
+    this.eat(TokenKind.AADESHA)
+    const target = this.eat(TokenKind.IDENTIFIER, 'aadesha target step name').value
+    // Parse the replacement step body as a pada, but the name IS the target
+    this.eat(TokenKind.LBRACE, `aadesha '${target}'`)
+    const pada = this.parsePadaBody(target, pos)
+    this.eat(TokenKind.RBRACE, `aadesha '${target}'`)
+    return { kind: 'aadesha', target, pada, pos }
+  }
+
   // ─── Step ───────────────────────────────────────────────────────────────────
 
   private parsePada(): PadaDecl {
@@ -299,7 +327,13 @@ class Parser {
     this.eat(TokenKind.PADA)
     const name = this.eat(TokenKind.IDENTIFIER, 'pada').value
     this.eat(TokenKind.LBRACE, `pada '${name}'`)
+    const pada = this.parsePadaBody(name, pos)
+    this.eat(TokenKind.RBRACE, `pada '${name}'`)
+    pada.itiName = this.tryEatIti()
+    return pada
+  }
 
+  private parsePadaBody(name: string, pos: Pos): PadaDecl {
     let karta: NameRef | undefined
     let kaarya: string | undefined
     let aagama: TypedField[] = []
@@ -326,19 +360,15 @@ class Parser {
       } else if (this.tryEat(TokenKind.APAVAADA)) {
         this.eat(TokenKind.ARROW)
         const vt = this.peek()
-        if (vt.kind === TokenKind.SVASTI || vt.kind === TokenKind.ANAAPTA) {
-          apavaada = this.advance().value
-        } else {
-          apavaada = this.eat(TokenKind.IDENTIFIER, 'apavaada target').value
-        }
+        apavaada = (vt.kind === TokenKind.SVASTI || vt.kind === TokenKind.ANAAPTA)
+          ? this.advance().value
+          : this.eat(TokenKind.IDENTIFIER, 'apavaada target').value
       } else if (this.tryEat(TokenKind.SAMAPTI)) {
         this.eat(TokenKind.ARROW)
         const kt = this.peek()
-        if (kt.kind === TokenKind.SVASTI || kt.kind === TokenKind.ANAAPTA) {
-          samapti = this.advance().value
-        } else {
-          samapti = this.eat(TokenKind.IDENTIFIER, 'samapti target').value
-        }
+        samapti = (kt.kind === TokenKind.SVASTI || kt.kind === TokenKind.ANAAPTA)
+          ? this.advance().value
+          : this.eat(TokenKind.IDENTIFIER, 'samapti target').value
       } else if (this.check(TokenKind.PRAVRITTI)) {
         const p = this.pos(); this.advance(); this.eat(TokenKind.COLON)
         routing = { kind: 'pravritti', target: this.eat(TokenKind.IDENTIFIER).value, pos: p }
@@ -348,9 +378,7 @@ class Parser {
       } else break
     }
 
-    this.eat(TokenKind.RBRACE, `pada '${name}'`)
-    const itiName = this.tryEatIti()
-    return { kind: 'pada', name, itiName, karta, kaarya, aagama, nirgama, samaya, khanda, apavaada, samapti, routing, pos }
+    return { kind: 'pada', name, karta, kaarya, aagama, nirgama, samaya, khanda, apavaada, samapti, routing, pos }
   }
 
   private parseDuration(): Duration {

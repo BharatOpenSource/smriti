@@ -7,13 +7,16 @@ smriti passport-renewal {
   aavartana: 1.0.0
   stara: public
 
+  aagama: old-passport (patra)
+
   paksha applicant {
     bhumika: citizen
     adhikara: submit
   }
 
   ghatana {
-    vrtti: "Applicant submits renewal request"
+    vrtti: old-passport != ""
+    kaarya: "Submit passport renewal request"
   }
 
   pravah {
@@ -85,7 +88,7 @@ describe('parser', () => {
     const smr = ast.decls[0]
     if (smr.kind !== 'smriti') return
     expect(smr.trigger?.kind).toBe('ghatana')
-    expect(smr.trigger?.items[0].kind).toBe('vrtti')
+    expect(smr.trigger?.vrtti?.kind).toBe('compare')
   })
 
   it('parses flow steps', () => {

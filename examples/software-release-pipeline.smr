@@ -35,8 +35,11 @@ smriti software-release-pipeline {
   }
 
   ghatana {
-    vrtti: "Pull request merged to main branch"
-    hetu:  "Automated release triggered on every merge to main"
+    vrtti:  service-name != "" && version-tag != ""
+    hetu:   prati 1 merge
+    karta:  engineer
+    sthala: "main branch"
+    kaarya: "Merge pull request"
   }
 
   pravah {
