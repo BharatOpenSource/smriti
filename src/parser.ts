@@ -91,6 +91,12 @@ class Parser {
     this.eat(TokenKind.LBRACE, `smriti '${name}'`)
 
     const metadata = this.parseMetadata()
+    const aagama = this.tryEat(TokenKind.AAGAMA)
+      ? (this.eat(TokenKind.COLON), this.parseTypedFields())
+      : undefined
+    const nirgama = this.tryEat(TokenKind.NIRGAMA)
+      ? (this.eat(TokenKind.COLON), this.parseTypedFields())
+      : undefined
     const references = this.parseReferences()
     const participants = this.parseParticipants()
     const trigger = this.check(TokenKind.GHATANA) ? this.parseGhatana() : undefined
@@ -98,7 +104,7 @@ class Parser {
 
     this.eat(TokenKind.RBRACE, `smriti '${name}'`)
     const itiName = this.tryEatIti()
-    return { kind: 'smriti', name, itiName, metadata, references, participants, trigger, flow, pos }
+    return { kind: 'smriti', name, itiName, metadata, references, participants, trigger, aagama, nirgama, flow, pos }
   }
 
   private parseSutra(): SutraDecl {

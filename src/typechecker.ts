@@ -7,6 +7,13 @@ import type {
 import { nameRefStr } from './ast.js'
 import type { ResolveContext } from './resolver.js'
 
+// Renders a SmritiType to a short human-readable string for error messages.
+function typeStr(t: SmritiType): string {
+  if (t.kind === 'krama') return `krama[${typeStr(t.of)}]`
+  if (t.kind === 'kosa')  return `kosa[${typeStr(t.key)}, ${typeStr(t.value)}]`
+  return t.kind
+}
+
 export class TypecheckError extends Error {
   constructor(message: string, public pos: Pos) {
     super(`[${pos.line}:${pos.col}] ${message}`)
@@ -34,7 +41,10 @@ class Checker {
     this.checkIti(decl.name, decl.itiName, decl.pos)
     const participantNames = new Set(decl.participants.map(p => p.name))
     for (const p of decl.participants) this.checkIti(p.name, p.itiName, p.pos)
-    if (decl.flow) this.checkFlow(decl.flow, participantNames)
+    // Smriti-level aagama are process inputs from the caller — pre-seeded as produced.
+    const externalInputs = new Map<string, SmritiType>()
+    if (decl.aagama) for (const f of decl.aagama) externalInputs.set(f.name, f.type)
+    if (decl.flow) this.checkFlow(decl.flow, participantNames, externalInputs)
   }
 
   private checkSutra(decl: SutraDecl) {
@@ -127,7 +137,7 @@ class Checker {
 
   // ─── Flow ──────────────────────────────────────────────────────────────────
 
-  private checkFlow(flow: FlowDecl, participants: Set<string>) {
+  private checkFlow(flow: FlowDecl, participants: Set<string>, externalInputs?: Map<string, SmritiType>) {
     const stepNames = this.collectStepNames(flow)
     this.checkStepUniqueness(flow)
 
@@ -146,6 +156,74 @@ class Checker {
         'pravah has no terminal (svasti or anaapta) and no vibhaga routing',
         flow.pos,
       )
+    }
+
+    // Data flow: validate aagama/nirgama connections and vibhaga field references.
+    this.checkDataFlow(flow.items, externalInputs)
+  }
+
+  // ─── Data flow ─────────────────────────────────────────────────────────────
+  // Flat analysis: collects all nirgama fields from all steps (not path-sensitive).
+  // A field on any branch is considered available. Path-sensitive analysis is future.
+
+  private collectProduced(items: FlowItem[], seed?: Map<string, SmritiType>): Map<string, SmritiType> {
+    const map = new Map<string, SmritiType>(seed)
+    for (const item of items) {
+      if (item.kind === 'pada') {
+        for (const f of item.nirgama) map.set(f.name, f.type)
+      }
+      if (item.kind === 'anubhaga') {
+        for (const track of item.tracks) {
+          for (const [k, v] of this.collectProduced(track)) map.set(k, v)
+        }
+      }
+    }
+    return map
+  }
+
+  private typesMatch(a: SmritiType, b: SmritiType): boolean {
+    if (a.kind !== b.kind) return false
+    if (a.kind === 'krama' && b.kind === 'krama') return this.typesMatch(a.of, b.of)
+    if (a.kind === 'kosa'  && b.kind === 'kosa')  return this.typesMatch(a.key, b.key) && this.typesMatch(a.value, b.value)
+    return true
+  }
+
+  private checkDataFlow(items: FlowItem[], externalInputs?: Map<string, SmritiType>) {
+    const produced = this.collectProduced(items, externalInputs)
+    if (produced.size === 0) return  // no typed fields — nothing to validate
+
+    for (const item of items) {
+      if (item.kind === 'pada') {
+        for (const f of item.aagama) {
+          const producedType = produced.get(f.name)
+          if (producedType === undefined) {
+            this.fail(
+              `aagama '${f.name}' is not produced by any step — ` +
+              `available: ${[...produced.keys()].join(', ')}`,
+              item.pos,
+            )
+          } else if (!this.typesMatch(f.type, producedType)) {
+            this.fail(
+              `aagama '${f.name}': declared as ${typeStr(f.type)} but produced as ${typeStr(producedType)}`,
+              item.pos,
+            )
+          }
+        }
+      }
+
+      if (item.kind === 'vibhaga' && item.on) {
+        if (!produced.has(item.on)) {
+          this.fail(
+            `vibhaga '${item.on}' references field not produced by any step — ` +
+            `available: ${[...produced.keys()].join(', ')}`,
+            item.pos,
+          )
+        }
+      }
+
+      if (item.kind === 'anubhaga') {
+        for (const track of item.tracks) this.checkDataFlow(track)
+      }
     }
   }
 

@@ -16,6 +16,7 @@ smriti passport-renewal {
   aavartana: 1.0.0
   stara: public
   avadhi: 30 antara
+  aagama: old-passport (patra)
 
   paksha applicant {
     bhumika: citizen

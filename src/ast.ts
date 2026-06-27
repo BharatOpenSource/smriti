@@ -38,7 +38,9 @@ export interface SmritiDecl extends Node {
   references: ReferenceDecl[]
   participants: PakshaDecl[]
   trigger?: GhatanaDecl
-  flow?: FlowDecl       // optional — smriti can be declaration-only
+  aagama?: TypedField[]   // process-level inputs (available throughout the flow)
+  nirgama?: TypedField[]  // process-level outputs (declared intent)
+  flow?: FlowDecl         // optional — smriti can be declaration-only
 }
 
 export interface SutraDecl extends Node {
