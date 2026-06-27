@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
 import { parse } from '../src/parser.js'
 import { typecheck } from '../src/typechecker.js'
-import { resolveImports } from '../src/resolver.js'
+import { resolveImports, parseRegistryUri, registryCachePath } from '../src/resolver.js'
 import { toYaml } from '../src/backends/yaml.js'
 import { toSvg, type Script } from '../src/backends/svg.js'
 
@@ -18,11 +18,14 @@ Usage:
   smr compile --svg <file.smr>                 Compile to SVG flow diagram
   smr compile --svg --script devanagari <file> SVG with Devanagari labels
   smr compile --out <path> <file.smr>          Write output to file
+  smr fetch <org/name@version>                 Prime local registry cache
+  smr fetch <org/name@version> --from <file>   Cache a local file as a registry entry
 
 Options:
   --help              Show this help
   --version           Show version
   --script <script>   Rendering script: latin (default) | devanagari
+  --from <file>       Source file for smr fetch
 `.trim()
 
 const args = process.argv.slice(2)
@@ -35,11 +38,14 @@ const outIdx    = args.indexOf('--out')
 const outPath   = outIdx !== -1 ? args[outIdx + 1] : null
 const scriptIdx = args.indexOf('--script')
 const scriptArg = scriptIdx !== -1 ? args[scriptIdx + 1] : null
+const fromIdx   = args.indexOf('--from')
+const fromArg   = fromIdx !== -1 ? args[fromIdx + 1] : null
 
-const keyValueFlags = new Set(['--out', '--script'])
+const keyValueFlags = new Set(['--out', '--script', '--from'])
 const valuePositions = new Set<number>()
 if (outIdx !== -1)    valuePositions.add(outIdx + 1)
 if (scriptIdx !== -1) valuePositions.add(scriptIdx + 1)
+if (fromIdx !== -1)   valuePositions.add(fromIdx + 1)
 
 const flags = new Set(args.filter((a, i) =>
   a.startsWith('--') && !keyValueFlags.has(a) && !valuePositions.has(i)
@@ -118,6 +124,51 @@ function run() {
       }
       output(toYaml(decl))
     }
+    return
+  }
+
+  if (command === 'fetch') {
+    const uriArg = files[0]
+    if (!uriArg) {
+      console.error('Usage: smr fetch <org/name@version> [--from <file.smr>]')
+      process.exit(1)
+    }
+
+    let uri
+    try {
+      uri = parseRegistryUri(uriArg)
+    } catch (e) {
+      console.error(String(e).replace(/^Error:\s*/, ''))
+      process.exit(1)
+    }
+
+    const cachePath = registryCachePath(uri)
+
+    if (!fromArg) {
+      // Registry not yet live — show where to put the file manually.
+      console.error(`smr: registry not yet live — no HTTP endpoint to fetch from.`)
+      console.error(`To prime the cache manually:`)
+      console.error(`  smr fetch ${uriArg} --from ./your-local-copy.smr`)
+      console.error(`Cache path: ${cachePath}`)
+      process.exit(1)
+    }
+
+    // --from <file>: read, validate, write to cache.
+    const source = readSource(fromArg)
+    try {
+      const ast = parse(source)
+      const context = resolveImports(ast, resolve(fromArg))
+      typecheck(ast, context)
+    } catch (e) {
+      console.error(`smr fetch: source file failed validation`)
+      console.error(String(e))
+      process.exit(1)
+    }
+
+    mkdirSync(dirname(cachePath), { recursive: true })
+    writeFileSync(cachePath, source, 'utf8')
+    console.log(`✓  Cached ${uriArg}`)
+    console.log(`   ${cachePath}`)
     return
   }
 

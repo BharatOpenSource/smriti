@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { resolve as resolvePath, dirname } from 'node:path'
+import { resolve as resolvePath, dirname, join } from 'node:path'
+import { homedir } from 'node:os'
 import { parse } from './parser.js'
 import { typecheck } from './typechecker.js'
 import type { SmritiFile, PakshaDecl, SangamaDecl } from './ast.js'
@@ -42,13 +43,55 @@ export class RelativeFileResolver implements SmritiResolver {
   }
 }
 
-export class RegistryResolver implements SmritiResolver {
-  load(yuja: string, _fromPath: string): string {
+// ─── Registry URI ─────────────────────────────────────────────────────────────
+
+export interface RegistryUri {
+  org:     string
+  name:    string
+  version: string
+}
+
+// Accepts: org/name@N.N.N  (e.g. BharatOpenSource/gst-refund@1.0.0)
+const REGISTRY_URI_RE = /^([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)@(\d+\.\d+\.\d+)$/
+
+export function parseRegistryUri(yuja: string): RegistryUri {
+  const m = yuja.match(REGISTRY_URI_RE)
+  if (!m) {
     throw new Error(
-      `Registry imports not yet supported: '${yuja}'\n` +
-      `Use a relative path instead: yuja: "./path/to/file.smr"`,
+      `Invalid registry URI: '${yuja}'\n` +
+      `Expected format: org/name@version  (e.g. BharatOpenSource/gst-refund@1.0.0)`,
     )
   }
+  return { org: m[1], name: m[2], version: m[3] }
+}
+
+export function defaultCacheRoot(): string {
+  return join(homedir(), '.smr', 'registry')
+}
+
+export function registryCachePath(uri: RegistryUri, cacheRoot = defaultCacheRoot()): string {
+  return join(cacheRoot, uri.org, uri.name, `${uri.version}.smr`)
+}
+
+// ─── Registry resolver ────────────────────────────────────────────────────────
+
+export class RegistryResolver implements SmritiResolver {
+  constructor(private cacheRoot = defaultCacheRoot()) {}
+
+  load(yuja: string, _fromPath: string): string {
+    const uri = parseRegistryUri(yuja)
+    const cachePath = registryCachePath(uri, this.cacheRoot)
+    try {
+      return readFileSync(cachePath, 'utf8')
+    } catch {
+      throw new Error(
+        `Registry process '${yuja}' not in local cache.\n` +
+        `Run: smr fetch ${yuja}\n` +
+        `Expected cache path: ${cachePath}`,
+      )
+    }
+  }
+
   canonical(yuja: string, _fromPath: string): string { return yuja }
 }
 

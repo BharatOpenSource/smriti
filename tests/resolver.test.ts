@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { parse } from '../src/parser.js'
 import { typecheck } from '../src/typechecker.js'
-import { resolveImports, RegistryResolver } from '../src/resolver.js'
+import { resolveImports, RegistryResolver, parseRegistryUri, registryCachePath } from '../src/resolver.js'
 
 // ─── Temp file setup ──────────────────────────────────────────────────────────
 
@@ -156,16 +156,117 @@ smriti test {
       .toThrow(/Cannot read import/)
   })
 
-  it('throws on registry-style yuja with helpful message', () => {
+  it('throws on invalid registry URI format with format hint', () => {
     const src = `
 smriti test {
-  sangama gov { yuja: "gov-india/participants@1.0" }
+  sangama gov { yuja: "gov-india/participants" }
   pravah { svasti }
 }
 `
     const ast = parse(src)
     expect(() => resolveImports(ast, join(TEMP, 'main.smr')))
-      .toThrow(/Registry imports not yet supported/)
+      .toThrow(/Invalid registry URI/)
+  })
+
+  it('throws cache-miss error with smr fetch hint when URI is valid but not cached', () => {
+    const src = `
+smriti test {
+  sangama gov { yuja: "gov-india/participants@1.0.0" }
+  pravah { svasti }
+}
+`
+    const ast = parse(src)
+    // Use a resolver with a fresh empty cache root so we know it's a miss.
+    const emptyCache = join(TEMP, 'empty-cache')
+    const resolver = new RegistryResolver(emptyCache)
+    expect(() => resolveImports(ast, join(TEMP, 'main.smr'), resolver))
+      .toThrow(/smr fetch gov-india\/participants@1\.0\.0/)
+  })
+})
+
+describe('registry resolver — parseRegistryUri', () => {
+  it('parses a valid org/name@version URI', () => {
+    const r = parseRegistryUri('BharatOpenSource/gst-refund@1.0.0')
+    expect(r).toEqual({ org: 'BharatOpenSource', name: 'gst-refund', version: '1.0.0' })
+  })
+
+  it('accepts hyphens and underscores in org and name', () => {
+    const r = parseRegistryUri('gov-india/pan_verification@2.1.3')
+    expect(r).toEqual({ org: 'gov-india', name: 'pan_verification', version: '2.1.3' })
+  })
+
+  it('rejects URI missing version', () => {
+    expect(() => parseRegistryUri('org/name'))
+      .toThrow(/Invalid registry URI/)
+  })
+
+  it('rejects URI missing org/name separator', () => {
+    expect(() => parseRegistryUri('justname@1.0.0'))
+      .toThrow(/Invalid registry URI/)
+  })
+
+  it('rejects relative path as registry URI', () => {
+    expect(() => parseRegistryUri('./file.smr'))
+      .toThrow(/Invalid registry URI/)
+  })
+
+  it('rejects version with only two parts', () => {
+    expect(() => parseRegistryUri('org/name@1.0'))
+      .toThrow(/Invalid registry URI/)
+  })
+})
+
+describe('registry resolver — cache', () => {
+  const CACHE_ROOT = join(TEMP, 'test-registry')
+
+  const MINIMAL_SMR = `
+smriti cached-process {
+  paksha agent { bhumika: worker adhikara: act }
+  pravah { svasti }
+}
+`
+
+  beforeAll(() => {
+    // Manually prime the cache for the hit test.
+    const uri = parseRegistryUri('test-org/cached-process@1.0.0')
+    mkdirSync(join(CACHE_ROOT, uri.org, uri.name), { recursive: true })
+    writeFileSync(registryCachePath(uri, CACHE_ROOT), MINIMAL_SMR, 'utf8')
+  })
+
+  it('loads from cache when the file exists', () => {
+    const src = `
+smriti main {
+  sangama lib { yuja: "test-org/cached-process@1.0.0" }
+  pravah { svasti }
+}
+`
+    const ast = parse(src)
+    const resolver = new RegistryResolver(CACHE_ROOT)
+    const context = resolveImports(ast, join(TEMP, 'main.smr'), resolver)
+    expect(context.imports.has('lib')).toBe(true)
+    expect(context.imports.get('lib')!.participants.map(p => p.name)).toContain('agent')
+  })
+
+  it('cache-miss error includes the expected cache path', () => {
+    const uri = 'test-org/missing-process@9.9.9'
+    const src = `
+smriti main {
+  sangama lib { yuja: "${uri}" }
+  pravah { svasti }
+}
+`
+    const ast = parse(src)
+    const resolver = new RegistryResolver(CACHE_ROOT)
+    const err = (() => {
+      try { resolveImports(ast, join(TEMP, 'main.smr'), resolver) }
+      catch (e) { return String(e) }
+      return ''
+    })()
+    expect(err).toMatch(/not in local cache/)
+    expect(err).toMatch(/smr fetch/)
+    expect(err).toMatch(/test-org/)
+    expect(err).toMatch(/missing-process/)
+    expect(err).toMatch(/9\.9\.9\.smr/)
   })
 })
 
