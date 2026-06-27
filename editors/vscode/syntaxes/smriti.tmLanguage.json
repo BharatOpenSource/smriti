@@ -10,6 +10,7 @@
     { "include": "#keyword-top" },
     { "include": "#keyword-flow" },
     { "include": "#keyword-terminal" },
+    { "include": "#operator" },
     { "include": "#arrow" },
     { "include": "#colon" },
     { "include": "#type" },
@@ -80,6 +81,12 @@
       "comment": "Literal values — tarka states and access levels",
       "name": "constant.language.smriti",
       "match": "\\b(satya|asatya|avyakta|public|restricted|private)\\b"
+    },
+
+    "operator": {
+      "comment": "Expression operators — comparison and logical",
+      "name": "keyword.operator.expression.smriti",
+      "match": "(==|!=|<=|>=|<|>|&&|\\|\\||!)"
     },
 
     "number": {

@@ -7,6 +7,8 @@ import type {
   VibhagaDecl, NiyamaClause, AnubhagaDecl, AnugamaDecl,
   AavahaDecl, SthitiDecl, TypedField, SmritiType,
   Expression, TarkaLiteral, IdentifierExpr,
+  NumberLiteral, StringLiteral, CompareExpr, LogicalExpr, NotExpr,
+  CompareOp, LogicalOp,
   PravrttiDecl, PrativrttiDecl, Pos,
   NameRef,
 } from './ast.js'
@@ -468,16 +470,87 @@ class Parser {
     }
   }
 
-  // ─── Expressions ────────────────────────────────────────────────────────────
+  // ─── Expressions ─────────────────────────────────────────────────────────────
+  // Recursive descent: logical_or > logical_and > comparison > not > primary
 
-  private parseExpression(): Expression {
+  private parseExpression(): Expression { return this.parseLogicalOr() }
+
+  private parseLogicalOr(): Expression {
+    let left = this.parseLogicalAnd()
+    while (this.check(TokenKind.OR)) {
+      const op = this.advance().kind as LogicalOp   // '||'
+      const right = this.parseLogicalAnd()
+      left = { kind: 'logical', left, op, right, pos: left.pos } satisfies LogicalExpr
+    }
+    return left
+  }
+
+  private parseLogicalAnd(): Expression {
+    let left = this.parseComparison()
+    while (this.check(TokenKind.AND)) {
+      const op = this.advance().kind as LogicalOp   // '&&'
+      const right = this.parseComparison()
+      left = { kind: 'logical', left, op, right, pos: left.pos } satisfies LogicalExpr
+    }
+    return left
+  }
+
+  private parseComparison(): Expression {
+    const left = this.parseNot()
+    const CMP_OPS: TokenKind[] = [
+      TokenKind.EQEQ, TokenKind.NEQ,
+      TokenKind.LT, TokenKind.GT, TokenKind.LTE, TokenKind.GTE,
+    ]
+    if (CMP_OPS.includes(this.peek().kind)) {
+      const opTok = this.advance()
+      const op = opTok.value as CompareOp
+      const right = this.parseNot()
+      return { kind: 'compare', left, op, right, pos: left.pos } satisfies CompareExpr
+    }
+    return left
+  }
+
+  private parseNot(): Expression {
+    if (this.check(TokenKind.BANG)) {
+      const pos = this.advance().pos
+      const operand = this.parseNot()
+      return { kind: 'not', operand, pos } satisfies NotExpr
+    }
+    return this.parsePrimary()
+  }
+
+  private parsePrimary(): Expression {
     const t = this.peek()
+
+    // Tarka literals
     if (t.kind === TokenKind.SATYA || t.kind === TokenKind.ASATYA || t.kind === TokenKind.AVYAKTA) {
       this.advance()
-      return { kind: 'tarka-literal', value: t.kind as 'satya' | 'asatya' | 'avyakta', pos: t.pos }
+      return { kind: 'tarka-literal', value: t.kind as 'satya' | 'asatya' | 'avyakta', pos: t.pos } satisfies TarkaLiteral
     }
+
+    // Number literal
+    if (t.kind === TokenKind.NUMBER) {
+      this.advance()
+      return { kind: 'number-literal', value: parseFloat(t.value), pos: t.pos } satisfies NumberLiteral
+    }
+
+    // String literal
+    if (t.kind === TokenKind.STRING) {
+      this.advance()
+      return { kind: 'string-literal', value: t.value, pos: t.pos } satisfies StringLiteral
+    }
+
+    // Parenthesised expression
+    if (this.check(TokenKind.LPAREN)) {
+      this.advance()
+      const inner = this.parseExpression()
+      this.eat(TokenKind.RPAREN, 'closing ) in expression')
+      return inner
+    }
+
+    // Identifier — field reference or bare name
     const name = this.eat(TokenKind.IDENTIFIER, 'expression').value
-    return { kind: 'identifier', name, pos: t.pos }
+    return { kind: 'identifier', name, pos: t.pos } satisfies IdentifierExpr
   }
 }
 

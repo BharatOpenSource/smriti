@@ -24,11 +24,20 @@ smriti passport-renewal {
       samaya: 7 antara
     }
 
+    pada fee-check {
+      karta: applicant
+      kaarya: "Pay renewal fee"
+      aagama: application-id (vakya)
+      nirgama: fee-amount (sankhya), payment-status (vakya)
+      khanda: application-id != ""
+      samaya: 3 antara
+    }
+
     pada verify {
       karta: passport-office
       kaarya: "Verify submitted documents"
-      aagama: application-id (vakya)
-      nirgama: verified (tarka)
+      aagama: application-id (vakya), fee-amount (sankhya)
+      nirgama: score (sankhya), verified (tarka)
       samaya: 14 antara
     }
 
@@ -36,6 +45,12 @@ smriti passport-renewal {
       niyama satya    → svasti
       niyama asatya   → anaapta
       niyama avyakta  → anaapta
+    }
+
+    # Expression-based branching (new) — score check for expedited processing
+    vibhaga score {
+      niyama score >= 90 → svasti
+      niyama score <  90 → anaapta
     }
 
     svasti

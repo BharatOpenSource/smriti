@@ -5,7 +5,7 @@ import type {
   SmritiDecl, PakshaDecl, FlowItem, PadaDecl,
   VibhagaDecl, TypedField,
 } from '../ast.js'
-import { nameRefStr } from '../ast.js'
+import { nameRefStr, exprStr } from '../ast.js'
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -127,7 +127,7 @@ function buildStep(
   }
 
   if (pada.khanda) {
-    step.precondition = expressionToString(pada.khanda)
+    step.precondition = exprStr(pada.khanda)
   }
 
   // Check if any output field has a vibhaga routing on it
@@ -138,7 +138,7 @@ function buildStep(
   if (routingVibhaga && !consumed.has(routingVibhaga)) {
     consumed.add(routingVibhaga)
     step.conditions = routingVibhaga.clauses.map(c => ({
-      if: expressionToString(c.condition),
+      if: exprStr(c.condition),
       next: c.target,
     }))
   } else if (pada.routing?.kind === 'pravritti') {
@@ -156,11 +156,6 @@ function fields(typed: TypedField[]): string[] {
   return typed.map(f => f.name)
 }
 
-function expressionToString(expr: { kind: string; name?: string; value?: string }): string {
-  if (expr.kind === 'tarka-literal') return expr.value ?? ''
-  if (expr.kind === 'identifier')    return expr.name ?? ''
-  return ''
-}
 
 // "passport-renewal" → "Passport Renewal"
 function prettify(s: string): string {

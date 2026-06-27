@@ -3,7 +3,7 @@
 // terminals as coloured endpoints. No complex graph layout — readable at v0.1.
 
 import type { SmritiDecl, FlowItem, PadaDecl, VibhagaDecl } from '../ast.js'
-import { nameRefStr } from '../ast.js'
+import { nameRefStr, exprStr } from '../ast.js'
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
@@ -183,7 +183,7 @@ function renderVibhaga(v: VibhagaDecl, y: number): string {
 
   let ty = y + 44
   for (const clause of v.clauses) {
-    const cond = exprLabel(clause.condition)
+    const cond = exprStr(clause.condition)
     const target = clause.target
     const arrow = target === 'svasti' ? '→ ✓' : target === 'anaapta' ? '→ ✗' : `→ ${target}`
     parts.push(
@@ -253,11 +253,6 @@ function fieldLabel(f: { name: string; type: { kind: string }; optional: boolean
   return `${f.optional ? '?' : ''}${f.name} (${f.type.kind})`
 }
 
-function exprLabel(expr: { kind: string; name?: string; value?: string }): string {
-  if (expr.kind === 'tarka-literal') return expr.value ?? ''
-  if (expr.kind === 'identifier')    return expr.name ?? ''
-  return ''
-}
 
 function wrapLines(s: string, limit: number): number {
   return Math.ceil(s.length / limit)

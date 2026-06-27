@@ -2,6 +2,7 @@ import type {
   SmritiFile, SmritiDecl, SutraDecl,
   FlowDecl, FlowItem, PadaDecl, VibhagaDecl,
   TypedField, SmritiType, Pos,
+  Expression,
 } from './ast.js'
 import { nameRefStr } from './ast.js'
 import type { ResolveContext } from './resolver.js'
@@ -41,6 +42,78 @@ class Checker {
     this.checkFlow(decl.flow, new Set())
     if (decl.aagama) this.checkTypedFields(decl.aagama)
     if (decl.nirgama) this.checkTypedFields(decl.nirgama)
+  }
+
+  // ─── Expression types ─────────────────────────────────────────────────────
+  // Simple type categories — used only for compatibility checking.
+  // 'unknown' means an unresolved identifier: passes all checks (data flow validates later).
+
+  private exprType(expr: Expression): 'tarka' | 'number' | 'string' | 'unknown' {
+    switch (expr.kind) {
+      case 'tarka-literal':  return 'tarka'
+      case 'number-literal': return 'number'
+      case 'string-literal': return 'string'
+      case 'identifier':     return 'unknown'   // resolved in data-flow pass
+      case 'compare':        return 'tarka'     // comparison always yields tarka
+      case 'logical':        return 'tarka'
+      case 'not':            return 'tarka'
+    }
+  }
+
+  private checkExpression(expr: Expression): void {
+    switch (expr.kind) {
+      case 'tarka-literal':
+      case 'number-literal':
+      case 'string-literal':
+      case 'identifier':
+        return   // primitives are always valid
+
+      case 'not':
+        this.checkExpression(expr.operand)
+        if (this.exprType(expr.operand) === 'number' || this.exprType(expr.operand) === 'string') {
+          this.fail(`'!' applied to ${this.exprType(expr.operand)} — expected a tarka expression`, expr.pos)
+        }
+        return
+
+      case 'logical': {
+        this.checkExpression(expr.left)
+        this.checkExpression(expr.right)
+        const lt = this.exprType(expr.left)
+        const rt = this.exprType(expr.right)
+        if (lt !== 'tarka' && lt !== 'unknown') {
+          this.fail(`left side of '${expr.op}' is ${lt} — expected tarka or boolean expression`, expr.left.pos)
+        }
+        if (rt !== 'tarka' && rt !== 'unknown') {
+          this.fail(`right side of '${expr.op}' is ${rt} — expected tarka or boolean expression`, expr.right.pos)
+        }
+        return
+      }
+
+      case 'compare': {
+        this.checkExpression(expr.left)
+        this.checkExpression(expr.right)
+        const lt = this.exprType(expr.left)
+        const rt = this.exprType(expr.right)
+        // Numeric ordering operators require numeric operands
+        const orderedOps = ['<', '>', '<=', '>='] as const
+        if (orderedOps.includes(expr.op as typeof orderedOps[number])) {
+          if (lt === 'string' || rt === 'string') {
+            this.fail(
+              `'${expr.op}' requires numeric operands — got string`,
+              expr.pos,
+            )
+          }
+        }
+        // Equality operators: operand types should agree (or one is unknown)
+        if (lt !== 'unknown' && rt !== 'unknown' && lt !== rt) {
+          this.fail(
+            `type mismatch in '${expr.op}': ${lt} vs ${rt}`,
+            expr.pos,
+          )
+        }
+        return
+      }
+    }
   }
 
   private checkIti(blockName: string, itiName: string | undefined, pos: Pos) {
@@ -163,6 +236,9 @@ class Checker {
       }
     }
 
+    // Guard clause type-check
+    if (pada.khanda) this.checkExpression(pada.khanda)
+
     if (pada.aagama) this.checkTypedFields(pada.aagama)
     if (pada.nirgama) this.checkTypedFields(pada.nirgama)
   }
@@ -171,8 +247,11 @@ class Checker {
 
   private checkVibhaga(vibhaga: VibhagaDecl, stepNames: Set<string>) {
     if (vibhaga.itiName) this.checkIti(vibhaga.on, vibhaga.itiName, vibhaga.pos)
-    // All branch targets must exist
+
     for (const clause of vibhaga.clauses) {
+      // Type-check condition expression
+      this.checkExpression(clause.condition)
+      // Branch target must exist
       const target = clause.target
       if (target !== 'svasti' && target !== 'anaapta' && !stepNames.has(target)) {
         this.fail(
@@ -182,16 +261,11 @@ class Checker {
       }
     }
 
-    // If branching on a tarka value, warn about missing cases
-    const tarkaClauses = vibhaga.clauses.filter(
-      c => c.condition.kind === 'tarka-literal'
-    )
-    if (tarkaClauses.length > 0) {
-      const covered = new Set(
-        tarkaClauses
-          .filter(c => c.condition.kind === 'tarka-literal')
-          .map(c => (c.condition as { value: string }).value)
-      )
+    // When ALL conditions are tarka literals, require all three cases (exhaustiveness).
+    // Mixed expressions (comparisons, identifiers) skip this check.
+    const allTarka = vibhaga.clauses.every(c => c.condition.kind === 'tarka-literal')
+    if (allTarka && vibhaga.clauses.length > 0) {
+      const covered = new Set(vibhaga.clauses.map(c => (c.condition as { value: string }).value))
       const missing = (['satya', 'asatya', 'avyakta'] as const).filter(v => !covered.has(v))
       if (missing.length > 0) {
         this.fail(

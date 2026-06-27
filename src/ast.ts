@@ -228,7 +228,11 @@ export type SmritiType =
 export type Expression =
   | TarkaLiteral
   | IdentifierExpr
-  | ComparisonExpr
+  | NumberLiteral
+  | StringLiteral
+  | CompareExpr
+  | LogicalExpr
+  | NotExpr
 
 export interface TarkaLiteral extends Node {
   kind: 'tarka-literal'
@@ -240,9 +244,48 @@ export interface IdentifierExpr extends Node {
   name: string
 }
 
-export interface ComparisonExpr extends Node {
-  kind: 'comparison'
-  left: string
-  op: '=' | '≠' | '>' | '<' | '≥' | '≤'
-  right: string | number
+export interface NumberLiteral extends Node {
+  kind: 'number-literal'
+  value: number
+}
+
+export interface StringLiteral extends Node {
+  kind: 'string-literal'
+  value: string
+}
+
+export type CompareOp = '==' | '!=' | '<' | '>' | '<=' | '>='
+
+export interface CompareExpr extends Node {
+  kind: 'compare'
+  left: Expression
+  op: CompareOp
+  right: Expression
+}
+
+export type LogicalOp = '&&' | '||'
+
+export interface LogicalExpr extends Node {
+  kind: 'logical'
+  left: Expression
+  op: LogicalOp
+  right: Expression
+}
+
+export interface NotExpr extends Node {
+  kind: 'not'
+  operand: Expression
+}
+
+// Render any expression to a human-readable string (for backends/diagnostics).
+export function exprStr(expr: Expression): string {
+  switch (expr.kind) {
+    case 'tarka-literal':  return expr.value
+    case 'identifier':     return expr.name
+    case 'number-literal': return String(expr.value)
+    case 'string-literal': return `"${expr.value}"`
+    case 'compare':        return `${exprStr(expr.left)} ${expr.op} ${exprStr(expr.right)}`
+    case 'logical':        return `(${exprStr(expr.left)} ${expr.op} ${exprStr(expr.right)})`
+    case 'not':            return `!${exprStr(expr.operand)}`
+  }
 }
