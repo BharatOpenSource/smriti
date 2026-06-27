@@ -83,6 +83,18 @@
           }
         },
         {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "anuvrtti"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
           "type": "STRING",
           "value": "{"
         },
@@ -113,6 +125,23 @@
               "type": "BLANK"
             }
           ]
+        }
+      ]
+    },
+    "anuvrtti": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "anuvrtti"
+        },
+        {
+          "type": "FIELD",
+          "name": "parent",
+          "content": {
+            "type": "SYMBOL",
+            "name": "name_ref"
+          }
         }
       ]
     },
@@ -681,19 +710,10 @@
           "value": "{"
         },
         {
-          "type": "REPEAT1",
+          "type": "REPEAT",
           "content": {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "vrtti_decl"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "hetu_decl"
-              }
-            ]
+            "type": "SYMBOL",
+            "name": "trigger_field"
           }
         },
         {
@@ -714,6 +734,31 @@
         }
       ]
     },
+    "trigger_field": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "vrtti_decl"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "hetu_decl"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "karta_trigger_decl"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sthala_trigger_decl"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "kaarya_trigger_decl"
+        }
+      ]
+    },
     "vrtti_decl": {
       "type": "SEQ",
       "members": [
@@ -727,7 +772,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "description"
+          "name": "expression"
         }
       ]
     },
@@ -743,24 +788,67 @@
           "value": ":"
         },
         {
+          "type": "STRING",
+          "value": "prati"
+        },
+        {
           "type": "SYMBOL",
-          "name": "description"
+          "name": "number"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
         }
       ]
     },
-    "description": {
-      "type": "CHOICE",
+    "karta_trigger_decl": {
+      "type": "SEQ",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "string"
+          "type": "STRING",
+          "value": "karta"
         },
         {
-          "type": "REPEAT1",
-          "content": {
-            "type": "SYMBOL",
-            "name": "identifier"
-          }
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "expression"
+        }
+      ]
+    },
+    "sthala_trigger_decl": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "sthala"
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "expression"
+        }
+      ]
+    },
+    "kaarya_trigger_decl": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "kaarya"
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "expression"
         }
       ]
     },
@@ -806,6 +894,14 @@
         {
           "type": "SYMBOL",
           "name": "pada_decl"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "aadesha_decl"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "varna_decl"
         },
         {
           "type": "SYMBOL",
@@ -894,6 +990,93 @@
         }
       ]
     },
+    "aadesha_decl": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "aadesha"
+        },
+        {
+          "type": "FIELD",
+          "name": "target",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "{"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "pada_body"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": "}"
+        }
+      ]
+    },
+    "varna_decl": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "varna"
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "FIELD",
+          "name": "type",
+          "content": {
+            "type": "SYMBOL",
+            "name": "type"
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "="
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "expression"
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        }
+      ]
+    },
     "pada_body": {
       "type": "REPEAT1",
       "content": {
@@ -929,7 +1112,15 @@
           },
           {
             "type": "SYMBOL",
+            "name": "apavaada_data"
+          },
+          {
+            "type": "SYMBOL",
             "name": "samapti_decl"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "samapti_data"
           },
           {
             "type": "SYMBOL",
@@ -1093,6 +1284,39 @@
         }
       ]
     },
+    "apavaada_data": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "apavaada"
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "typed_field"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "SYMBOL",
+                "name": "typed_field"
+              }
+            ]
+          }
+        }
+      ]
+    },
     "samapti_decl": {
       "type": "SEQ",
       "members": [
@@ -1107,6 +1331,39 @@
         {
           "type": "SYMBOL",
           "name": "branch_target"
+        }
+      ]
+    },
+    "samapti_data": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "samapti"
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "typed_field"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "SYMBOL",
+                "name": "typed_field"
+              }
+            ]
+          }
         }
       ]
     },
@@ -1528,8 +1785,25 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "STRING",
-          "value": "sankhya"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "sankhya"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "range_constraint"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
         },
         {
           "type": "STRING",
@@ -1540,8 +1814,25 @@
           "value": "dashaamsha"
         },
         {
-          "type": "STRING",
-          "value": "vakya"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "vakya"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "string"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
         },
         {
           "type": "STRING",
@@ -1558,6 +1849,49 @@
         {
           "type": "STRING",
           "value": "patra"
+        }
+      ]
+    },
+    "range_constraint": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "number"
+            },
+            {
+              "type": "STRING",
+              "value": ".."
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "number"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": ".."
+            },
+            {
+              "type": "SYMBOL",
+              "name": "number"
+            }
+          ]
         }
       ]
     },

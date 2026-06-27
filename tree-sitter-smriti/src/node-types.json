@@ -1,5 +1,31 @@
 [
   {
+    "type": "aadesha_decl",
+    "named": true,
+    "fields": {
+      "target": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "pada_body",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "aagama_decl",
     "named": true,
     "fields": {},
@@ -181,6 +207,37 @@
     }
   },
   {
+    "type": "anuvrtti",
+    "named": true,
+    "fields": {
+      "parent": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "name_ref",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "apavaada_data",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "typed_field",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "apavaada_decl",
     "named": true,
     "fields": {},
@@ -313,25 +370,6 @@
     "fields": {}
   },
   {
-    "type": "description",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "string",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "expression",
     "named": true,
     "fields": {},
@@ -390,6 +428,10 @@
       "required": true,
       "types": [
         {
+          "type": "aadesha_decl",
+          "named": true
+        },
+        {
           "type": "aavaha_decl",
           "named": true
         },
@@ -418,6 +460,10 @@
           "named": true
         },
         {
+          "type": "varna_decl",
+          "named": true
+        },
+        {
           "type": "vibhaga_decl",
           "named": true
         }
@@ -429,11 +475,15 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
         {
-          "type": "description",
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "number",
           "named": true
         }
       ]
@@ -471,6 +521,21 @@
     }
   },
   {
+    "type": "kaarya_trigger_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "karta_decl",
     "named": true,
     "fields": {},
@@ -480,6 +545,21 @@
       "types": [
         {
           "type": "name_ref",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "karta_trigger_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "expression",
           "named": true
         }
       ]
@@ -720,6 +800,10 @@
           "named": true
         },
         {
+          "type": "apavaada_data",
+          "named": true
+        },
+        {
           "type": "apavaada_decl",
           "named": true
         },
@@ -741,6 +825,10 @@
         },
         {
           "type": "routing",
+          "named": true
+        },
+        {
+          "type": "samapti_data",
           "named": true
         },
         {
@@ -970,6 +1058,21 @@
     }
   },
   {
+    "type": "range_constraint",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "number",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "reference",
     "named": true,
     "fields": {},
@@ -1002,6 +1105,21 @@
         },
         {
           "type": "pravritti_decl",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "samapti_data",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "typed_field",
           "named": true
         }
       ]
@@ -1078,7 +1196,21 @@
   {
     "type": "scalar_type",
     "named": true,
-    "fields": {}
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "range_constraint",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "smriti_body",
@@ -1189,6 +1321,21 @@
     }
   },
   {
+    "type": "sthala_trigger_decl",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "sthiti_decl",
     "named": true,
     "fields": {
@@ -1251,6 +1398,10 @@
       "required": false,
       "types": [
         {
+          "type": "anuvrtti",
+          "named": true
+        },
+        {
           "type": "iti",
           "named": true
         },
@@ -1277,6 +1428,25 @@
     "fields": {},
     "children": {
       "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "iti",
+          "named": true
+        },
+        {
+          "type": "trigger_field",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "trigger_field",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
       "required": true,
       "types": [
         {
@@ -1284,7 +1454,15 @@
           "named": true
         },
         {
-          "type": "iti",
+          "type": "kaarya_trigger_decl",
+          "named": true
+        },
+        {
+          "type": "karta_trigger_decl",
+          "named": true
+        },
+        {
+          "type": "sthala_trigger_decl",
           "named": true
         },
         {
@@ -1340,6 +1518,42 @@
     }
   },
   {
+    "type": "varna_decl",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "type",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "vibhaga_decl",
     "named": true,
     "fields": {
@@ -1378,7 +1592,7 @@
       "required": true,
       "types": [
         {
-          "type": "description",
+          "type": "expression",
           "named": true
         }
       ]
@@ -1417,6 +1631,10 @@
     "named": false
   },
   {
+    "type": "..",
+    "named": false
+  },
+  {
     "type": ":",
     "named": false
   },
@@ -1426,6 +1644,10 @@
   },
   {
     "type": "<=",
+    "named": false
+  },
+  {
+    "type": "=",
     "named": false
   },
   {
@@ -1446,6 +1668,10 @@
   },
   {
     "type": "]",
+    "named": false
+  },
+  {
+    "type": "aadesha",
     "named": false
   },
   {
@@ -1482,6 +1708,10 @@
   },
   {
     "type": "anugama",
+    "named": false
+  },
+  {
+    "type": "anuvrtti",
     "named": false
   },
   {
@@ -1597,6 +1827,10 @@
     "named": false
   },
   {
+    "type": "prati",
+    "named": false
+  },
+  {
     "type": "prativritti",
     "named": false
   },
@@ -1678,6 +1912,10 @@
   },
   {
     "type": "vakya",
+    "named": false
+  },
+  {
+    "type": "varna",
     "named": false
   },
   {
