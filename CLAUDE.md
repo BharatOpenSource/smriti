@@ -1,19 +1,17 @@
-# Sutra — Claude Instructions
-
-*Tentative name. Final name TBD.*
+# Smriti — Claude Instructions
 
 > Read this before doing any work in this directory.
 > Org context: see `../CLAUDE.md`.
 
 ## What this project is
 
-A domain-specific language for expressing institutional and civic processes — readable, auditable, formally defined.
+**Smriti (स्मृति)** is a formal language for expressing processes, rules, and systems — readable, auditable, formally defined. File extension: `.smr`.
 
-**The practical goal:** A clean, precise language with a formal grammar that makes process definitions unambiguous and toolable. Designed to be read by non-technical people after 10 minutes, written by developers and power users, parsed by machines.
+**Sutra (सूत्र)** is the reusable building block unit within Smriti. File extension: `.sut`. Sutra is also the name of the toolchain (parser, compiler, LSP, renderers) that processes both file types.
 
-**The ambitious goal:** Become the standard for expressing civic and institutional processes — the way HTML became the standard for web documents. Inspired by Panini's Ashtadhyayi: a formal grammar so precise and compact it defines an entire system.
+**The goal:** A clean, precise language with a formal grammar that makes process definitions unambiguous and toolable. Designed to be read by non-technical people after 10 minutes, written by developers and power users, parsed by machines.
 
-**Relationship to pravaaha:** Sutra is the language; pravaaha is the platform. pravaaha v0.1 uses YAML. Sutra becomes the source format in pravaaha v0.2+. When Sutra is ready, the YAML schema is a compilation target, not the source.
+**Relationship to pravaaha:** Smriti is the language; pravaaha is the platform. pravaaha v0.1 uses YAML. Smriti becomes the source format in pravaaha v0.2+. The YAML schema is a compilation target, not the source.
 
 ## Design principles
 
@@ -25,9 +23,11 @@ A domain-specific language for expressing institutional and civic processes — 
 
 ## Current status
 
-**Not yet started. Language design phase.**
+**Language design complete. Vocabulary locked. Grammar next.**
 
-The pravaaha YAML schema (v0.1) is the empirical foundation — real process definitions will reveal what constructs the language actually needs. Do not design the grammar in a vacuum.
+- Names locked: Smriti (language), Sutra (reusable unit + toolchain)
+- Vocabulary locked: 47 Sanskrit terms across structural, flow, data, and type categories (see `docs/ConvoQA.md`)
+- Next: PEG vs Tree-sitter decision, then formal grammar draft
 
 ## Session start checklist
 

@@ -53,15 +53,15 @@ LLVM IR      → native binary (long term)
 
 ## Connection to indic-os
 
-Smriti is designed to be the policy and configuration language for [indic-os](https://github.com/BharatOpenSource/indic-os) — expressing OS-level processes, service lifecycles, and user rights in the same language used for civic processes. The substrate and the application layer speak the same language.
+Smriti is designed to be the policy and configuration language for [indic-os](https://github.com/BharatOpenSource/indic-os) — expressing OS-level processes, service lifecycles, and user rights in the same language used to define any other process or system. The substrate and the application layer speak the same language.
 
 ## Current status
 
-**Language design complete. Grammar and vocabulary being finalised.**
+**Language design complete. Vocabulary locked. Grammar next.**
 
 - [x] Architecture decisions locked: Sanskrit vocabulary, multi-script, grammar-first, full computation
 - [x] File format: `.smr` (Smriti) and `.sut` (Sutra)
-- [ ] Sanskrit vocabulary (29 core terms) — being coined
+- [x] Sanskrit vocabulary — 47 terms locked (structural, flow, data, types)
 - [ ] Formal grammar document
 - [ ] Parser (generated from grammar)
 - [ ] YAML renderer (pravaaha integration)

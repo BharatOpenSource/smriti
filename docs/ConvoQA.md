@@ -61,10 +61,92 @@ This is architectural coherence from first principles, not coincidence.
 - Example: `pan-verification.sut` published by gov-india; imported by any `.smr` that needs PAN verification
 - When a `.sut` is imported, its hash is locked at declaration time (same model as pravaaha process references)
 
+### Vocabulary — locked 2026-06-27
+
+**Structural (16 terms)**
+
+| Term | Devanagari | Meaning |
+|------|-----------|---------|
+| smriti | स्मृति | Complete process definition — outer container of `.smr` |
+| sutra | सूत्र | Reusable building block — outer container of `.sut` |
+| paksha | पक्ष | Named participant — specific person, org, or system |
+| bhumika | भूमिका | Abstract role — the position a participant fills |
+| adhikara | अधिकार | A right or entitlement |
+| pramana | प्रमाण | Legal/normative authority citation backing a right |
+| adhipati | अधिपति | Owner / author of the process |
+| aavartana | आवर्तन | Version |
+| stara | स्तर | Access level — public / restricted / private |
+| avadhi | अवधि | Compliance delay — days before change takes effect |
+| prabhaava | प्रभाव | Effective date — when this version comes into force |
+| sthala | स्थल | Specific jurisdiction / place |
+| kshetra | क्षेत्र | Broader region / domain (super-scope of sthala) |
+| sangama | संगम | External reference — where flows meet (another process/system) |
+| lagna | लग्न | Pinpointed reference — exact who/what/when/where |
+| yuja | युज | Import connector — the act of connecting a reference |
+
+**Flow (18 terms)**
+
+| Term | Devanagari | Meaning |
+|------|-----------|---------|
+| ghatana | घटना | Process trigger — what starts this process |
+| vrtti | वृत्ति | Trigger sub-type: a condition becoming true |
+| hetu | हेतु | Trigger sub-type: a cause, purpose, or schedule |
+| pravah | प्रवाह | Flow block — container for all steps and routing |
+| pada | पद | A single named step |
+| karta | कर्ता | Actor — who performs this step |
+| kaarya | कार्य | Action — what the step does |
+| aagama | आगम | Inputs to a step |
+| nirgama | निर्गम | Outputs of a step |
+| samaya | समय | Per-step time limit / TTL |
+| khanda | खण्ड | Guard clause — condition that must be true before step executes |
+| pravritti | प्रवृत्ति | Forward movement to next step |
+| prativritti | प्रतिवृत्ति | Loop back to a previous step |
+| svasti | स्वस्ति | Success terminal — process ends here successfully |
+| anaapta | अनाप्त | Failure terminal — process ends here rejected or failed |
+| vibhaga | विभाग | Branching point — multiple exclusive paths |
+| niyama | नियम | Condition evaluated at a branch point |
+| anubhaga | अनुभाग | Parallel split — launch concurrent tracks |
+| anugama | अनुगम | Parallel join — wait for all tracks to complete |
+| aavaha | आवाह | Sub-process invocation — call another `.smr` |
+
+**Data (2 terms)**
+
+| Term | Devanagari | Meaning |
+|------|-----------|---------|
+| varna | वर्ण | Named variable / data binding between steps |
+| sthiti | स्थिति | Named intermediate workflow state |
+
+**Types (13 terms + 3 values)**
+
+| Term | Devanagari | Meaning |
+|------|-----------|---------|
+| sankhya | संख्या | Whole number |
+| bhinnaanka | भिन्नांक | Fraction (1/3, 3/7) |
+| dashaamsha | दशांश | Decimal (3.14, 0.5) |
+| vakya | वाक्य | Text |
+| tithi | तिथि | Calendar date |
+| antara | अन्तर | Time span |
+| tarka | तर्क | Logic / boolean type — holds satya, asatya, or avyakta |
+| satya | सत्य | tarka value: true |
+| asatya | असत्य | tarka value: false |
+| avyakta | अव्यक्त | tarka value: indeterminate — neither true nor false; unresolved, pending, or error. Catches what satya and asatya do not. Rooted in Samkhya (the unmanifest) and Advaita (that which is neither real nor unreal). |
+| patra | पत्र | Document or file reference |
+| krama | क्रम | Ordered list / sequence |
+| kosa | कोश | Key-value map / dictionary |
+| vikalpa | विकल्प | Optional modifier — marks a field as not required |
+
+**Notes**
+- `tarka` with three values (`satya`/`asatya`/`avyakta`) is trivalent logic. Exhaustive matching on a `tarka` expression must handle all three — `avyakta` is the catch-all for unresolved states, analogous to a third branch in a try-catch.
+- `sthala`/`kshetra` are a two-level jurisdiction pair: specific place vs broader domain.
+- `sangama`/`lagna` are a two-level reference pair: external flow meeting point vs pinpointed exact reference.
+- `ghatana` is the trigger block; `vrtti` and `hetu` are sub-type qualifiers within it.
+- `varna` (color) as variable name is historically grounded: Indian mathematics used color names for unknowns.
+- `vikalpa` is Panini's term for optional rules — directly applicable here.
+
 ## Open Questions / Tasks
 
-- [ ] **VOCABULARY** — Srikar to coin 29 Sanskrit terms (see LatestTask.md)
 - [ ] Grammar approach: PEG vs Tree-sitter (decision needed before parser work begins)
 - [ ] Indic script rendering: decide canonical script for display (Devanagari recommended as Sanskrit's native script)
-- [ ] v0.1 toolchain scope confirmation after vocabulary is locked
+- [ ] v0.1 toolchain scope confirmation
 - [ ] GitHub repo creation for Sutra (currently local folder only)
+- [ ] Draft formal grammar using locked vocabulary
