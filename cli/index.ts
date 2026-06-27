@@ -5,7 +5,7 @@ import { parse } from '../src/parser.js'
 import { typecheck } from '../src/typechecker.js'
 import { resolveImports } from '../src/resolver.js'
 import { toYaml } from '../src/backends/yaml.js'
-import { toSvg } from '../src/backends/svg.js'
+import { toSvg, type Script } from '../src/backends/svg.js'
 
 const VERSION = '0.1.0'
 
@@ -13,14 +13,16 @@ const HELP = `
 smr — Smriti language toolchain v${VERSION}
 
 Usage:
-  smr check <file.smr>                Parse and type-check only
-  smr compile <file.smr>              Compile to YAML (default)
-  smr compile --svg <file.smr>        Compile to SVG flow diagram
-  smr compile --out <path> <file.smr> Write output to file
+  smr check <file.smr>                         Parse and type-check only
+  smr compile <file.smr>                       Compile to YAML (default)
+  smr compile --svg <file.smr>                 Compile to SVG flow diagram
+  smr compile --svg --script devanagari <file> SVG with Devanagari labels
+  smr compile --out <path> <file.smr>          Write output to file
 
 Options:
-  --help      Show this help
-  --version   Show version
+  --help              Show this help
+  --version           Show version
+  --script <script>   Rendering script: latin (default) | devanagari
 `.trim()
 
 const args = process.argv.slice(2)
@@ -29,10 +31,22 @@ if (args.length === 0 || args.includes('--help')) { console.log(HELP); process.e
 if (args.includes('--version')) { console.log(VERSION); process.exit(0) }
 
 const command = args[0]
-const outIdx = args.indexOf('--out')
-const outPath = outIdx !== -1 ? args[outIdx + 1] : null
-const flags = new Set(args.filter(a => a.startsWith('--') && a !== '--out' && a !== outPath))
-const files = args.filter((a, i) => !a.startsWith('--') && a !== command && i !== outIdx + 1)
+const outIdx    = args.indexOf('--out')
+const outPath   = outIdx !== -1 ? args[outIdx + 1] : null
+const scriptIdx = args.indexOf('--script')
+const scriptArg = scriptIdx !== -1 ? args[scriptIdx + 1] : null
+
+const keyValueFlags = new Set(['--out', '--script'])
+const valuePositions = new Set<number>()
+if (outIdx !== -1)    valuePositions.add(outIdx + 1)
+if (scriptIdx !== -1) valuePositions.add(scriptIdx + 1)
+
+const flags = new Set(args.filter((a, i) =>
+  a.startsWith('--') && !keyValueFlags.has(a) && !valuePositions.has(i)
+))
+const files = args.filter((a, i) =>
+  !a.startsWith('--') && a !== command && !valuePositions.has(i)
+)
 
 function readSource(path: string): string {
   try {
@@ -91,7 +105,12 @@ function run() {
     if (decl.kind !== 'smriti') { console.error('smr: sutra files compile to .sut — use a smriti file'); process.exit(1) }
 
     if (flags.has('--svg')) {
-      output(toSvg(decl))
+      const script: Script = scriptArg === 'devanagari' ? 'devanagari' : 'latin'
+      if (scriptArg && script === 'latin' && scriptArg !== 'latin') {
+        console.error(`smr: unknown script '${scriptArg}' — use 'latin' or 'devanagari'`)
+        process.exit(1)
+      }
+      output(toSvg(decl, { script }))
     } else {
       if (!decl.flow) {
         console.error('smr: this smriti has no pravah — YAML output requires a flow. Use --svg for a declaration diagram.')

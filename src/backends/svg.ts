@@ -4,6 +4,13 @@
 
 import type { SmritiDecl, FlowItem, PadaDecl, VibhagaDecl } from '../ast.js'
 import { nameRefStr, exprStr } from '../ast.js'
+import { type Script, type Labels, labelsFor } from '../scripts.js'
+
+export type { Script }
+
+export interface SvgOptions {
+  script?: Script
+}
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
@@ -31,23 +38,23 @@ const C = {
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-export function toSvg(decl: SmritiDecl): string {
+export function toSvg(decl: SmritiDecl, options: SvgOptions = {}): string {
+  const lbl = labelsFor(options.script ?? 'latin')
   const items = decl.flow?.items ?? []
 
   // Calculate total canvas height
   let totalH = 20 + HDR_H + ARROW
   for (const item of items) totalH += itemH(item) + ARROW + GAP
-  if (items.length === 0) totalH += 60  // room for "declaration only" note
+  if (items.length === 0) totalH += 60
   totalH += 40
 
-  const parts: string[] = [header(totalH)]
+  const parts: string[] = [svgHeader(totalH, lbl)]
   let y = 20
 
   parts.push(headerBox(decl, y))
   y += HDR_H
 
   if (items.length === 0) {
-    // Declaration-only smriti — show participants if present, note no flow
     const note = decl.participants.length > 0
       ? `${decl.participants.length} participant${decl.participants.length > 1 ? 's' : ''} declared · no pravah`
       : 'declaration only · no pravah'
@@ -57,7 +64,7 @@ export function toSvg(decl: SmritiDecl): string {
   for (const item of items) {
     parts.push(arrowLine(CX, y, y + ARROW))
     y += ARROW
-    parts.push(renderItem(item, y))
+    parts.push(renderItem(item, y, lbl))
     y += itemH(item) + GAP
   }
 
@@ -94,10 +101,10 @@ function vibBoxH(v: VibhagaDecl): number {
 
 // ─── SVG header ──────────────────────────────────────────────────────────────
 
-function header(height: number): string {
+function svgHeader(height: number, lbl: Labels): string {
   return [
     `<svg width="${W}" height="${height}" xmlns="http://www.w3.org/2000/svg"`,
-    `     font-family="'Segoe UI', system-ui, sans-serif" font-size="14">`,
+    `     font-family="${lbl.fontFamily}" font-size="14">`,
     `  <defs>`,
     `    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">`,
     `      <path d="M0,0 L0,6 L8,3 z" fill="${C.arrow}"/>`,
@@ -130,19 +137,19 @@ function headerBox(decl: SmritiDecl, y: number): string {
 
 // ─── Flow items ──────────────────────────────────────────────────────────────
 
-function renderItem(item: FlowItem, y: number): string {
+function renderItem(item: FlowItem, y: number, lbl: Labels): string {
   switch (item.kind) {
-    case 'pada':    return renderStep(item, y)
-    case 'vibhaga': return renderVibhaga(item, y)
-    case 'svasti':  return terminalBox(y, '✓  Completed', C.ok, C.okText)
-    case 'anaapta': return terminalBox(y, '✗  Rejected', C.fail, C.failText)
+    case 'pada':    return renderStep(item, y, lbl)
+    case 'vibhaga': return renderVibhaga(item, y, lbl)
+    case 'svasti':  return terminalBox(y, lbl.completed, C.ok, C.okText)
+    case 'anaapta': return terminalBox(y, lbl.rejected, C.fail, C.failText)
     case 'sthiti':  return terminalBox(y, `◎  ${item.name}`, '#8E44AD', '#FFFFFF')
     case 'aavaha':  return terminalBox(y, `⤷  ${nameRefStr(item.target)}`, '#2471A3', '#FFFFFF')
     default:        return ''
   }
 }
 
-function renderStep(pada: PadaDecl, y: number): string {
+function renderStep(pada: PadaDecl, y: number, lbl: Labels): string {
   const h = stepBoxH(pada)
   const parts: string[] = [
     rect(BOX_X, y, BOX_W, h, 8, C.stepFill, C.stepBorder, 2),
@@ -153,7 +160,7 @@ function renderStep(pada: PadaDecl, y: number): string {
 
   let ty = y + 44
   if (pada.karta) {
-    parts.push(metaLine(BOX_X + 16, ty, 'Actor:', nameRefStr(pada.karta)))
+    parts.push(metaLine(BOX_X + 16, ty, lbl.actor, nameRefStr(pada.karta), lbl.valueOffset))
     ty += 20
   }
   if (pada.kaarya) {
@@ -164,33 +171,33 @@ function renderStep(pada: PadaDecl, y: number): string {
     }
   }
   if (pada.aagama.length > 0) {
-    parts.push(metaLine(BOX_X + 16, ty, 'In:', pada.aagama.map(f => fieldLabel(f)).join(', ')))
+    parts.push(metaLine(BOX_X + 16, ty, lbl.inputs, pada.aagama.map(f => fieldLabel(f)).join(', '), lbl.valueOffset))
     ty += 20
   }
   if (pada.nirgama.length > 0) {
-    parts.push(metaLine(BOX_X + 16, ty, 'Out:', pada.nirgama.map(f => fieldLabel(f)).join(', ')))
+    parts.push(metaLine(BOX_X + 16, ty, lbl.outputs, pada.nirgama.map(f => fieldLabel(f)).join(', '), lbl.valueOffset))
     ty += 20
   }
   if (pada.samaya) {
-    parts.push(metaLine(BOX_X + 16, ty, 'SLA:', `${pada.samaya.value} ${pada.samaya.unit}`))
+    parts.push(metaLine(BOX_X + 16, ty, lbl.sla, `${pada.samaya.value} ${pada.samaya.unit}`, lbl.valueOffset))
     ty += 20
   }
   if (pada.apavaada) {
-    parts.push(metaLine(BOX_X + 16, ty, '⚠ fail →', pada.apavaada))
+    parts.push(metaLine(BOX_X + 16, ty, lbl.fail, pada.apavaada, lbl.valueOffset))
     ty += 20
   }
   if (pada.samapti) {
-    parts.push(metaLine(BOX_X + 16, ty, '⏱ timeout →', pada.samapti))
+    parts.push(metaLine(BOX_X + 16, ty, lbl.timeout, pada.samapti, lbl.valueOffset))
   }
 
   return parts.join('\n')
 }
 
-function renderVibhaga(v: VibhagaDecl, y: number): string {
+function renderVibhaga(v: VibhagaDecl, y: number, lbl: Labels): string {
   const h = vibBoxH(v)
   const parts: string[] = [
     rect(BOX_X, y, BOX_W, h, 8, C.vibFill, C.vibBorder, 2, '6,3'),
-    pill(BOX_X + 16, y + 14, `◇  branch: ${v.on}`, C.vibBorder, '#FFFFFF'),
+    pill(BOX_X + 16, y + 14, `◇  ${lbl.branch} ${v.on}`, C.vibBorder, '#FFFFFF'),
   ]
 
   let ty = y + 44
@@ -252,10 +259,10 @@ function arrowLine(x: number, y1: number, y2: number): string {
     ` stroke="${C.arrow}" stroke-width="2" marker-end="url(#arr)"/>`
 }
 
-function metaLine(x: number, y: number, label: string, value: string): string {
+function metaLine(x: number, y: number, label: string, value: string, valueOffset = 48): string {
   return [
     text(x, y, label, C.meta, 12, 'bold', 'start'),
-    text(x + 44, y, value, C.stepText, 12, 'normal', 'start'),
+    text(x + valueOffset, y, value, C.stepText, 12, 'normal', 'start'),
   ].join('\n')
 }
 
@@ -264,7 +271,6 @@ function metaLine(x: number, y: number, label: string, value: string): string {
 function fieldLabel(f: { name: string; type: { kind: string }; optional: boolean }): string {
   return `${f.optional ? '?' : ''}${f.name} (${f.type.kind})`
 }
-
 
 function wrapLines(s: string, limit: number): number {
   return Math.ceil(s.length / limit)
