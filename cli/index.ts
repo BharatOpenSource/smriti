@@ -8,6 +8,7 @@ import { toYaml } from '../src/backends/yaml.js'
 import { toSutraYaml } from '../src/backends/sutra-yaml.js'
 import { toSvg, type Script } from '../src/backends/svg.js'
 import { toOpenApi } from '../src/backends/openapi.js'
+import { computeIntervalMs } from '../src/scheduler.js'
 import { evaluateGhatana, evaluateKriya, buildKriyaEnv, type Payload } from '../src/evaluator.js'
 import { executeSmriti } from '../src/executor.js'
 import { buildRegistry } from '../src/registry.js'
@@ -29,6 +30,8 @@ Usage:
   smr run <file.smr> --kriya <name>            Execute a named kriya and print nirgama
   smr run <file.smr> --kriya <name> --payload <json>  Execute kriya with aagama payload
   smr trigger <file.smr> --payload <json>      Evaluate ghatana against a payload
+  smr schedule <file.smr>                      Run smriti on its hetu schedule (Ctrl+C to stop)
+  smr schedule <file.smr> --once               Run once immediately (skips the timer)
   smr fetch <org/name@version>                 Prime local registry cache
   smr fetch <org/name@version> --from <file>   Cache a local file as a registry entry
 
@@ -284,6 +287,94 @@ function run() {
     }
     console.log(result.fires ? '→ process fires' : '→ process does not fire')
     process.exit(result.fires ? 0 : 1)
+  }
+
+  if (command === 'schedule') {
+    const file = files[0]
+    if (!file) { console.error('Usage: smr schedule <file.smr> [--payload <json>] [--once]'); process.exit(1) }
+    const source = readSource(file)
+    let ast
+    try {
+      const abs = resolve(file)
+      const parsed = parse(source)
+      const context = resolveImports(parsed, abs)
+      ast = typecheck(parsed, context)
+    } catch (e) {
+      console.error(String(e)); process.exit(1)
+    }
+
+    const smritiDecls = ast.decls.filter(d => d.kind === 'smriti')
+    const smritiDecl = smritiDecls[smritiDecls.length - 1]
+    if (!smritiDecl || smritiDecl.kind !== 'smriti') {
+      console.error('smr schedule: no smriti declaration found'); process.exit(1)
+    }
+    if (!smritiDecl.trigger?.hetu) {
+      console.error(`smr schedule: '${smritiDecl.name}' has no hetu schedule — add a ghatana block with: hetu prati N <unit>`)
+      process.exit(1)
+    }
+
+    const hetu = smritiDecl.trigger.hetu
+    let intervalMs: number
+    try {
+      intervalMs = computeIntervalMs(hetu.quantity, hetu.unit)
+    } catch (e) {
+      console.error(String(e)); process.exit(1)
+    }
+
+    let payload: Payload = {}
+    if (payloadArg) {
+      try { payload = JSON.parse(payloadArg) as Payload }
+      catch { console.error('smr schedule: --payload must be valid JSON'); process.exit(1) }
+    }
+
+    const env = buildKriyaEnv(ast)
+    const registry = buildRegistry(ast)
+    const runOnce = flags.has('--once')
+
+    const label = `${smritiDecl.itiName ?? smritiDecl.name}`
+    if (!runOnce) {
+      console.log(`smr schedule: ${label} — every ${hetu.quantity} ${hetu.unit}`)
+      console.log('(Ctrl+C to stop)\n')
+    }
+
+    let runCount = 0
+
+    function executeRun() {
+      runCount++
+      const ts = new Date().toISOString()
+      // Check vrtti condition before running
+      if (smritiDecl!.trigger?.vrtti) {
+        const ghatanaResult = evaluateGhatana(smritiDecl!.trigger, payload, env)
+        if (!ghatanaResult.fires) {
+          console.log(`[run ${runCount}] ${ts}  vrtti: ${ghatanaResult.vrtti} — skipped`)
+          return
+        }
+      }
+      let flowResult
+      try {
+        flowResult = executeSmriti(smritiDecl!, payload, env, registry)
+      } catch (e) {
+        console.log(`[run ${runCount}] ${ts}  error: ${String(e)}`)
+        return
+      }
+      console.log(`[run ${runCount}] ${ts}  outcome: ${flowResult.outcome}  (${flowResult.steps} steps)`)
+      for (const entry of flowResult.log) {
+        const badge = entry.status === 'skipped' ? '[skip]' :
+                      entry.status === 'auto-completed' ? '[auto]' : '[done]'
+        const fields = Object.keys(entry.produced)
+        const summary = fields.length ? ` → ${fields.map(k => `${k}: ${JSON.stringify(entry.produced[k])}`).join(', ')}` : ''
+        console.log(`  ${badge} ${entry.name}${summary}`)
+      }
+    }
+
+    if (runOnce) {
+      executeRun()
+      return
+    }
+
+    executeRun()
+    setInterval(executeRun, intervalMs)
+    return
   }
 
   if (command === 'fetch') {
