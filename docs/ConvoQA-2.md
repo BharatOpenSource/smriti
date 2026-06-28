@@ -141,8 +141,8 @@ Seven capability layers. Layers 1–4 complete (426 tests). Layer 5 (seva) is ne
 | 2 | Mutable state | `sthiti` | ✓ done |
 | 3 | I/O and effects | effect system, sparsha | ✓ done |
 | 4 | Runtime / executor + aavaha | `smr run`, registry | ✓ done |
-| 5 | API / service layer | `seva` | Next |
-| 6 | Persistence | `sangraha` | Follows L5 |
+| 5 | API / service layer | `seva` | ✓ done |
+| 6 | Persistence | `sangraha` | ✓ done (schema; 6.2 = flow wire-up) |
 | 7 | UI / component model | `darshana` | Far |
 
 Full roadmap with sequencing: see `docs/roadmap.md`.
@@ -176,6 +176,10 @@ Separate session task (not a capability layer). Move `tree-sitter-smriti/` to it
 - [x] Grammar spec v0.3: all features documented in `spec/grammar.ebnf`
 - [x] Sutra compile target: `smr compile` works on `.sut` files
 - [x] Tree-sitter v0.3: grammar.js + parser.c regenerated; highlights updated
+- [x] Cross-step error data validation — `checkHandlerCoverage()` in typechecker
+- [x] Runtime scheduling — `smr schedule`, `computeIntervalMs`, Sanskrit unit aliases
+- [x] Layer 5 seva — OpenAPI 3.1 emit, `smr compile --openapi`
+- [x] Layer 6 sangraha — JSON schema emit, `smr compile --schema`; vocabulary locked
+- [ ] sangraha Layer 6.2 — `aavaha store.op` flow wire-up (switch prepared in typechecker)
 - [ ] Registry HTTP fetch — blocked on pravaaha
-- [ ] Cross-step error data validation — handler `aagama` vs source `apavaada:` not yet enforced
-- [ ] Runtime scheduling — hetu schedule is declared, not executed
+- [ ] tree-sitter standalone — separate session

@@ -2,59 +2,51 @@
 
 > Rolling log. Current session only — 1-2 sessions max. 200-line limit.
 
-## Session: 2026-06-27 (archived)
+## Session: 2026-06-28 (archived)
 
 All language gaps + infrastructure complete. 264 tests, 17 files. varna, apavaada/samapti data,
 krama/kosa constraints, grammar v0.3, tree-sitter regenerated, sutra YAML backend.
 
 ---
 
-## Session: 2026-06-28
+## Session: 2026-06-28 (current)
 
-**Commits:** a69c7a1 (Layers 1–4), 788c7cf (Layer 5)
-**Tests:** 426 passing, 22 files
+**Commits:** cf7213f (L5 seva), fb3fbb0 (cross-step validation), a554140 (scheduling), 2a5fdbb (L6 sangraha)
+**Tests:** 523 passing, 25 files
 
-### Layer 1 — Computation (kriya) ✓
-- `kriya` keyword, `sparsha` effects block, `aagama`/`nirgama` typed I/O, arithmetic + call expressions
-- Evaluator: `buildKriyaEnv()`, `evaluateKriya()`; CLI: `smr run --kriya <name> [--payload <json>]`
-- 72 tests in `tests/kriya.test.ts`
+### Layer 5 — seva (service endpoint declaration) ✓
+- `seva` block: method, path, typed aagama + nirgama, optional itiName
+- Typechecker: validates HTTP verb, path starts with `/`, field types
+- `src/backends/openapi.ts`: `toOpenApi()` — OpenAPI 3.1 JSON; path params, query params, request body, response body, optional fields
+- CLI: `smr compile --openapi <file.smr>`
+- 29 tests in `tests/seva.test.ts`
 
-### Layer 2 — Mutable State (sthiti) ✓
-- `sthiti { field (type) = init }` in kriya (call-local) / smriti/sutra (process-scoped)
-- `SthitiBlock`/`SthitiField` AST; `buildInitialState()` in evaluator; typechecker dup/type checks
-- 26 tests in `tests/sthiti.test.ts`
+### Cross-step error data validation ✓
+- Typechecker `checkHandlerCoverage()`: when step A declares `apavaadaNirgama`/`samaptiNirgama`,
+  handler B's `aagama` must cover all fields with matching types
+- Terminals (`svasti`/`anaapta`) exempt from check
+- 11 new tests across `tests/apavaada.test.ts` and `tests/samapti.test.ts`
 
-### Layer 3 — I/O and Effects ✓
-- `src/effects.ts`: `HttpAdapter`, `FileAdapter`, `EventAdapter`, `EffectAdapter`, null adapters
-- Typechecker: `collectImpureKriya()` + `checkExprPurity()` — pure kriya cannot call impure
-- 21 tests in `tests/layer3.test.ts`
+### Runtime scheduling ✓
+- `src/scheduler.ts`: `computeIntervalMs(quantity, unit)` — converts hetu to ms
+- Supported units: ms, second(s), minute(s), hour(s), day(s), week(s) + Sanskrit aliases
+- `antara` explicitly rejected (Smriti duration type ≠ scheduling unit)
+- CLI: `smr schedule <file.smr> [--once]` — runs executeSmriti on hetu interval, checks vrtti before each run
+- 21 tests in `tests/scheduler.test.ts`
 
-### Layer 4 — Process Executor ✓
-- `src/executor.ts`: `executeSmriti()` / `executeFlow()` — full FlowItem dispatch
-- pada: khanda guard, kaarya kriya (positional nirgama mapping), auto-complete
-- vibhaga routing, pravritti/prativritti jump, anubhaga parallel (snapshot/merge)
-- Budget guard: 10,000 steps shared across all recursive track calls
-- CLI: `smr run <file.smr> [--payload <json>]` prints step log + outcome
-- 28 tests in `tests/executor.test.ts`
-
-### Layer 5 — Process Registry + aavaha ✓
-- `src/registry.ts`: `buildRegistry(file)` — maps smriti/sutra decls by name
-- Executor aavaha: lookup → build child aagama → run with shared budget → write nirgama back → fold log
-- anaapta in child propagates to parent; recursive aavaha bounded by shared budget
-- CLI: picks LAST smriti as root (sub-processes declared first); registry passed to executor
-- 15 tests in `tests/registry.test.ts`
-
-**Smoke tests:**
-- `smr run --kriya add-tax --payload '{"amount":1000,"rate":0.18}'` → `{"total":1180,"tax":180}`
-- `smr run gst-filing.smr --payload '{"amount":50000,"taxpayer-type":"registered"}'` → svasti (4 steps)
-- `smr run loan-application.smr --payload '{"pan":"ABCDE1234F","amount":500000}'` → svasti (7 steps, aavaha)
+### Layer 6 — sangraha (persistent store declaration) ✓
+- `SangrahaDecl`: mukhya (primary key, must be scalar), vivara (schema fields), likha/pathana/uddhaara/lopa op bindings
+- Typechecker: mukhya required + scalar-only; no duplicate vivara; op bindings validated against file kriya
+- Flow-aware TODO in `checkAavaha` — `aavaha store.op` wire-up point for Layer 6.2
+- `src/backends/schema.ts`: `toSchema()` — `{ version, stores[] }` JSON
+- CLI: `smr compile --schema <file.smr>`
+- 36 tests in `tests/sangraha.test.ts`
 
 ---
 
 ## Open items
 
-- [ ] **Layer 5 — seva (OpenAPI emit)**: `seva` block in language; `smr compile --openapi <file.smr>`; `src/backends/openapi.ts`; no runtime, no new deps
-- [ ] **`smr fetch` HTTP**: blocked — needs live pravaaha registry endpoint; HttpAdapter ready (Layer 3)
-- [ ] **tree-sitter standalone**: separate session — move `tree-sitter-smriti/` to own BharatOpenSource repo, wire nvim-treesitter, Linguist
-- [ ] Cross-step error data validation — handler `aagama` vs source `apavaada:` not yet enforced
-- [ ] Runtime scheduling — `hetu prati N unit` declared, not executed
+- [ ] **Layer 7 — darshana**: UI component/view declaration; far horizon
+- [ ] **sangraha Layer 6.2 — flow wire-up**: `aavaha store.op` in typechecker + executor; switch already prepared
+- [ ] **tree-sitter standalone**: separate session — own BharatOpenSource repo, nvim-treesitter, Linguist
+- [ ] **smr fetch HTTP**: blocked — needs live pravaaha registry endpoint

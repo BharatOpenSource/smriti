@@ -43,32 +43,26 @@ Explicit effect system. `sparsha` block inside impure kriya declares effects. `E
 
 ---
 
-### Layer 5 — API / Service Layer (OpenAPI)
-**Key concept:** `seva` (सेवा) — named service endpoint declaration
+### Layer 5 — API / Service Layer (OpenAPI) ✓
+**Commit:** cf7213f
 
-**Scope decided 2026-06-28:** compile-to-spec only. No HTTP server runtime. No new npm dependencies.
-
-**What's needed:**
-- `seva` block: method, path, typed aagama (request body) + nirgama (response body), bound to a `smriti` or `kriya`
-- `smr compile --openapi <file.smr>` — emit OpenAPI 3.1 JSON
-- `src/backends/openapi.ts` — new backend
-- Typechecker: validate bound target exists, field types are JSON-compatible
-- Vocabulary: lock `seva` (सेवा)
-
-**Unlock:** pravaaha API contract declared in Smriti, validated by the typechecker, emitted as OpenAPI for consumers. No runtime dependency — embed or call from any HTTP server.
+`seva` — named HTTP endpoint declaration. method, path, typed aagama (request) + nirgama (response).
+`smr compile --openapi <file.smr>` emits OpenAPI 3.1 JSON. Path params from `{name}` templates;
+GET/DELETE → query params; POST/PUT/PATCH → request body. No runtime, no new deps. 29 tests.
 
 ---
 
-### Layer 6 — Persistence
-**Key concept:** `sangraha` (संग्रह) — persistent typed store
+### Layer 6 — Persistence ✓
+**Commit:** 2a5fdbb
 
-**What's needed:**
-- `sangraha` block: named store with typed schema (SQLite, Postgres, or file — backend pluggable)
-- CRUD operations as `kriya` blocks bound to a `sangraha`
-- Process instance tracking: a running `.smr` process has a persistent identity and state
-- Migration model: schema changes versioned
+`sangraha` — named persistent store. mukhya (primary key, scalar-only), vivara (schema fields),
+optional op bindings: likha/pathana/uddhaara/lopa → named kriya.
+`smr compile --schema <file.smr>` emits `{ version, stores[] }` JSON. No runtime storage engine.
+Typechecker validates key type, no duplicate fields, op bindings reference real kriya.
+Flow wire-up prepared: `aavaha store.op` TODO comment in `checkAavaha` — one block to turn on.
+36 tests.
 
-**Unlock:** pravaaha can track in-progress process instances. Registry is persistent. Audit logs automatic.
+**Layer 6.2 (next):** `aavaha filings.likha` dispatch in typechecker + executor.
 
 ---
 
@@ -86,13 +80,13 @@ Two paths, sequenced:
 ## Sequencing
 
 ```
-Done        Layers 1–4 — kriya, sthiti, effects, executor + aavaha registry
+Done        Layers 1–6 — kriya, sthiti, effects, executor + aavaha registry, seva, sangraha
+            Cross-step error validation, runtime scheduling also complete
 
-Next        Layer 5 — seva (OpenAPI emit)
-            smr compile --openapi; pravaaha API contract in Smriti
+Next        Layer 6.2 — sangraha flow wire-up
+            aavaha store.op dispatch in typechecker + executor
 
-Then        Layer 6 — sangraha (persistence)
-            Process instances tracked; registry persistent
+Then        Layer 7 — darshana (UI spec)
 
 Later       Layer 7 path 1 — darshana as UI spec
             pravaaha GUI builder reads .smr
@@ -122,6 +116,6 @@ CLI, diff engine, hash computation, semantic validation — all `kriya` blocks.
 
 | Term | Devanagari | Proposed meaning | Layer | Status |
 |------|-----------|-----------------|-------|--------|
-| seva | सेवा | Service endpoint declaration | 5 | Scope locked — OpenAPI emit only |
-| sangraha | संग्रह | Persistent typed store | 6 | Proposed |
+| seva | सेवा | Service endpoint declaration | 5 | Done — OpenAPI emit |
+| sangraha | संग्रह | Persistent typed store | 6 | Done — JSON schema emit; flow wire-up = 6.2 |
 | darshana | दर्शन | UI component / view | 7 | Proposed |
