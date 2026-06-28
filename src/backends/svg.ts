@@ -83,10 +83,16 @@ function itemH(item: FlowItem): number {
   return 0
 }
 
+function kaaryadStr(pada: PadaDecl): string | undefined {
+  if (!pada.kaarya) return undefined
+  return typeof pada.kaarya === 'string' ? pada.kaarya : exprStr(pada.kaarya)
+}
+
 function stepBoxH(pada: PadaDecl): number {
+  const kaarya = kaaryadStr(pada)
   let lines = 1                             // name
   if (pada.karta)               lines += 1
-  if (pada.kaarya)              lines += wrapLines(pada.kaarya, 72)
+  if (kaarya)                   lines += wrapLines(kaarya, 72)
   if (pada.aagama.length > 0)   lines += 1
   if (pada.nirgama.length > 0)  lines += 1
   if (pada.samaya)              lines += 1
@@ -163,8 +169,9 @@ function renderStep(pada: PadaDecl, y: number, lbl: Labels): string {
     parts.push(metaLine(BOX_X + 16, ty, lbl.actor, nameRefStr(pada.karta), lbl.valueOffset))
     ty += 20
   }
-  if (pada.kaarya) {
-    const lines = wrapText(pada.kaarya, 72)
+  const kaarya = kaaryadStr(pada)
+  if (kaarya) {
+    const lines = wrapText(kaarya, 72)
     for (const line of lines) {
       parts.push(text(BOX_X + 16, ty, line, C.stepText, 13, 'normal', 'start'))
       ty += 18

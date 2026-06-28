@@ -9,9 +9,13 @@ import type {
   AavahaDecl, SthitiDecl, TypedField, SmritiType,
   Expression, TarkaLiteral, IdentifierExpr,
   NumberLiteral, StringLiteral, CompareExpr, LogicalExpr, NotExpr,
+  NegateExpr, ArithExpr, ArithOp, CallExpr,
   CompareOp, LogicalOp,
   PravrttiDecl, PrativrttiDecl, Pos,
   NameRef,
+  KriyaDecl, SparshaDecl, SparshaField, EffectChannel, EffectMode,
+  KriyaStmt, AssignStmt, ExprStmt,
+  SthitiBlock, SthitiField,
 } from './ast.js'
 
 export class ParseError extends Error {
@@ -73,13 +77,14 @@ class Parser {
 
   parseFile(): SmritiFile {
     const pos = this.pos()
-    const decls: (SmritiDecl | SutraDecl)[] = []
+    const decls: (SmritiDecl | SutraDecl | KriyaDecl)[] = []
     while (!this.check(TokenKind.EOF)) {
-      if (this.check(TokenKind.SMRITI)) decls.push(this.parseSmriti())
-      else if (this.check(TokenKind.SUTRA)) decls.push(this.parseSutra())
+      if (this.check(TokenKind.SMRITI))      decls.push(this.parseSmriti())
+      else if (this.check(TokenKind.SUTRA))  decls.push(this.parseSutra())
+      else if (this.check(TokenKind.KRIYA))  decls.push(this.parseKriya())
       else {
         const t = this.peek()
-        throw new ParseError(`Expected 'smriti' or 'sutra', got '${t.value}'`, t.pos)
+        throw new ParseError(`Expected 'smriti', 'sutra', or 'kriya', got '${t.value}'`, t.pos)
       }
     }
     return { kind: 'file', decls, pos }
@@ -100,12 +105,15 @@ class Parser {
       : undefined
     const references = this.parseReferences()
     const participants = this.parseParticipants()
+    const kriya = this.parseKriyaDecls()
+    const sthitiBlock = this.check(TokenKind.STHITI) && this.tokens[this.i + 1]?.kind === TokenKind.LBRACE
+      ? this.parseSthitiBlock() : undefined
     const trigger = this.check(TokenKind.GHATANA) ? this.parseGhatana() : undefined
     const flow = this.check(TokenKind.PRAVAH) ? this.parseFlow() : undefined
 
     this.eat(TokenKind.RBRACE, `smriti '${name}'`)
     const itiName = this.tryEatIti()
-    return { kind: 'smriti', name, itiName, metadata, references, participants, trigger, aagama, nirgama, flow, pos }
+    return { kind: 'smriti', name, itiName, metadata, references, participants, kriya, sthitiBlock, trigger, aagama, nirgama, flow, pos }
   }
 
   private parseSutra(): SutraDecl {
@@ -119,6 +127,9 @@ class Parser {
     const aagama = this.tryEat(TokenKind.AAGAMA)
       ? (this.eat(TokenKind.COLON), this.parseTypedFields())
       : undefined
+    const kriya = this.parseKriyaDecls()
+    const sthitiBlock = this.check(TokenKind.STHITI) && this.tokens[this.i + 1]?.kind === TokenKind.LBRACE
+      ? this.parseSthitiBlock() : undefined
     const flow = this.parseFlow()
     const nirgama = this.tryEat(TokenKind.NIRGAMA)
       ? (this.eat(TokenKind.COLON), this.parseTypedFields())
@@ -126,7 +137,7 @@ class Parser {
 
     this.eat(TokenKind.RBRACE, `sutra '${name}'`)
     const itiName = this.tryEatIti()
-    return { kind: 'sutra', name, itiName, metadata, parent, aagama, flow, nirgama, pos }
+    return { kind: 'sutra', name, itiName, metadata, parent, aagama, kriya, sthitiBlock, flow, nirgama, pos }
   }
 
   // ─── Metadata ───────────────────────────────────────────────────────────────
@@ -337,7 +348,7 @@ class Parser {
 
   private parsePadaBody(name: string, pos: Pos): PadaDecl {
     let karta: NameRef | undefined
-    let kaarya: string | undefined
+    let kaarya: string | CallExpr | undefined
     let aagama: TypedField[] = []
     let nirgama: TypedField[] = []
     let samaya: Duration | undefined
@@ -352,7 +363,18 @@ class Parser {
       if (this.tryEat(TokenKind.KARTA)) {
         this.eat(TokenKind.COLON); karta = this.parseNameRef()
       } else if (this.tryEat(TokenKind.KAARYA)) {
-        this.eat(TokenKind.COLON); kaarya = this.eat(TokenKind.STRING).value
+        this.eat(TokenKind.COLON)
+        if (this.check(TokenKind.KRIYA)) {
+          // kriya invocation: kaarya: kriya name(args)
+          const callPos = this.pos(); this.advance()
+          const callee = this.parseNameRef()
+          this.eat(TokenKind.LPAREN, 'kriya invocation in kaarya')
+          const args = this.parseArgList()
+          this.eat(TokenKind.RPAREN, 'kriya invocation in kaarya')
+          kaarya = { kind: 'call', callee, args, pos: callPos } satisfies CallExpr
+        } else {
+          kaarya = this.eat(TokenKind.STRING).value
+        }
       } else if (this.tryEat(TokenKind.AAGAMA)) {
         this.eat(TokenKind.COLON); aagama = this.parseTypedFields()
       } else if (this.tryEat(TokenKind.NIRGAMA)) {
@@ -569,14 +591,15 @@ class Parser {
   }
 
   // ─── Expressions ─────────────────────────────────────────────────────────────
-  // Recursive descent: logical_or > logical_and > comparison > not > primary
+  // Recursive descent (low to high precedence):
+  //   logical_or > logical_and > comparison > additive > multiplicative > unary > primary
 
   private parseExpression(): Expression { return this.parseLogicalOr() }
 
   private parseLogicalOr(): Expression {
     let left = this.parseLogicalAnd()
     while (this.check(TokenKind.OR)) {
-      const op = this.advance().kind as LogicalOp   // '||'
+      const op = this.advance().kind as LogicalOp
       const right = this.parseLogicalAnd()
       left = { kind: 'logical', left, op, right, pos: left.pos } satisfies LogicalExpr
     }
@@ -586,7 +609,7 @@ class Parser {
   private parseLogicalAnd(): Expression {
     let left = this.parseComparison()
     while (this.check(TokenKind.AND)) {
-      const op = this.advance().kind as LogicalOp   // '&&'
+      const op = this.advance().kind as LogicalOp
       const right = this.parseComparison()
       left = { kind: 'logical', left, op, right, pos: left.pos } satisfies LogicalExpr
     }
@@ -594,25 +617,49 @@ class Parser {
   }
 
   private parseComparison(): Expression {
-    const left = this.parseNot()
+    const left = this.parseAdditive()
     const CMP_OPS: TokenKind[] = [
       TokenKind.EQEQ, TokenKind.NEQ,
       TokenKind.LT, TokenKind.GT, TokenKind.LTE, TokenKind.GTE,
     ]
     if (CMP_OPS.includes(this.peek().kind)) {
-      const opTok = this.advance()
-      const op = opTok.value as CompareOp
-      const right = this.parseNot()
+      const op = this.advance().value as CompareOp
+      const right = this.parseAdditive()
       return { kind: 'compare', left, op, right, pos: left.pos } satisfies CompareExpr
     }
     return left
   }
 
-  private parseNot(): Expression {
+  private parseAdditive(): Expression {
+    let left = this.parseMultiplicative()
+    while (this.check(TokenKind.PLUS) || this.check(TokenKind.MINUS)) {
+      const op = this.advance().value as ArithOp
+      const right = this.parseMultiplicative()
+      left = { kind: 'arith', left, op, right, pos: left.pos } satisfies ArithExpr
+    }
+    return left
+  }
+
+  private parseMultiplicative(): Expression {
+    let left = this.parseUnary()
+    while (this.check(TokenKind.STAR) || this.check(TokenKind.SLASH) || this.check(TokenKind.PERCENT)) {
+      const op = this.advance().value as ArithOp
+      const right = this.parseUnary()
+      left = { kind: 'arith', left, op, right, pos: left.pos } satisfies ArithExpr
+    }
+    return left
+  }
+
+  private parseUnary(): Expression {
     if (this.check(TokenKind.BANG)) {
       const pos = this.advance().pos
-      const operand = this.parseNot()
+      const operand = this.parseUnary()
       return { kind: 'not', operand, pos } satisfies NotExpr
+    }
+    if (this.check(TokenKind.MINUS)) {
+      const pos = this.advance().pos
+      const operand = this.parseUnary()
+      return { kind: 'negate', operand, pos } satisfies NegateExpr
     }
     return this.parsePrimary()
   }
@@ -646,9 +693,143 @@ class Parser {
       return inner
     }
 
-    // Identifier — field reference or bare name
-    const name = this.eat(TokenKind.IDENTIFIER, 'expression').value
-    return { kind: 'identifier', name, pos: t.pos } satisfies IdentifierExpr
+    // Identifier — may be a plain reference, a local call, or a qualified call
+    const first = this.eat(TokenKind.IDENTIFIER, 'expression').value
+
+    if (this.check(TokenKind.DOT)) {
+      // Qualified name: namespace.member — must be a call in expression position
+      this.advance()
+      const member = this.eat(TokenKind.IDENTIFIER, 'qualified name in expression').value
+      const callee: NameRef = { namespace: first, name: member }
+      this.eat(TokenKind.LPAREN, `qualified call '${first}.${member}'`)
+      const args = this.parseArgList()
+      this.eat(TokenKind.RPAREN, `qualified call '${first}.${member}'`)
+      return { kind: 'call', callee, args, pos: t.pos } satisfies CallExpr
+    }
+
+    if (this.check(TokenKind.LPAREN)) {
+      // Local call: name(args)
+      this.advance()
+      const args = this.parseArgList()
+      this.eat(TokenKind.RPAREN, `call '${first}'`)
+      return { kind: 'call', callee: first, args, pos: t.pos } satisfies CallExpr
+    }
+
+    return { kind: 'identifier', name: first, pos: t.pos } satisfies IdentifierExpr
+  }
+
+  // ─── Computation (kriya) ─────────────────────────────────────────────────────
+
+  private parseKriyaDecls(): KriyaDecl[] {
+    const decls: KriyaDecl[] = []
+    while (this.check(TokenKind.KRIYA)) decls.push(this.parseKriya())
+    return decls
+  }
+
+  private parseKriya(): KriyaDecl {
+    const pos = this.pos()
+    this.eat(TokenKind.KRIYA)
+    const name = this.eat(TokenKind.IDENTIFIER, 'kriya declaration').value
+    this.eat(TokenKind.LBRACE, `kriya '${name}'`)
+
+    // Permissive ordering: header sections (sparsha/aagama/nirgama/sthiti) and body
+    // statements may appear in any order. Keyword tokens dispatch to the right handler;
+    // everything else is a statement.
+    let sparsha: SparshaDecl | undefined
+    let aagama: TypedField[] = []
+    let nirgama: TypedField[] = []
+    let sthitiBlock: SthitiBlock | undefined
+    const body: KriyaStmt[] = []
+
+    while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
+      if (this.check(TokenKind.SPARSHA)) {
+        sparsha = this.parseSparsha()
+      } else if (this.check(TokenKind.AAGAMA)) {
+        this.advance(); this.eat(TokenKind.COLON, `kriya '${name}' aagama`)
+        aagama = this.parseTypedFields()
+      } else if (this.check(TokenKind.NIRGAMA)) {
+        this.advance(); this.eat(TokenKind.COLON, `kriya '${name}' nirgama`)
+        nirgama = this.parseTypedFields()
+      } else if (this.check(TokenKind.STHITI) && this.tokens[this.i + 1]?.kind === TokenKind.LBRACE) {
+        sthitiBlock = this.parseSthitiBlock()
+      } else {
+        body.push(this.parseKriyaStmt())
+      }
+    }
+
+    this.eat(TokenKind.RBRACE, `kriya '${name}'`)
+    const itiName = this.tryEatIti()
+    return { kind: 'kriya', name, itiName, sparsha, aagama, nirgama, sthitiBlock, body, pos }
+  }
+
+  private parseSparsha(): SparshaDecl {
+    const pos = this.pos()
+    this.eat(TokenKind.SPARSHA)
+    this.eat(TokenKind.LBRACE, 'sparsha')
+    const fields: SparshaField[] = []
+    while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
+      const fpos = this.pos()
+      const channelTok = this.advance()
+      const channel = channelTok.value as EffectChannel
+      this.eat(TokenKind.COLON, 'sparsha field')
+      const modeTok = this.advance()
+      const mode = modeTok.value as EffectMode
+      fields.push({ kind: 'sparsha-field', channel, mode, pos: fpos })
+    }
+    this.eat(TokenKind.RBRACE, 'sparsha')
+    return { kind: 'sparsha', fields, pos }
+  }
+
+  private parseKriyaBody(): KriyaStmt[] {
+    const stmts: KriyaStmt[] = []
+    while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
+      stmts.push(this.parseKriyaStmt())
+    }
+    return stmts
+  }
+
+  private parseKriyaStmt(): KriyaStmt {
+    const pos = this.pos()
+    // Lookahead: IDENTIFIER followed immediately by EQ (=) → assign-stmt.
+    // EQ is always single = (EQEQ == is a distinct token), so no ambiguity.
+    if (this.check(TokenKind.IDENTIFIER) && this.tokens[this.i + 1]?.kind === TokenKind.EQ) {
+      const name = this.advance().value
+      this.eat(TokenKind.EQ, `assignment to '${name}'`)
+      const expr = this.parseExpression()
+      return { kind: 'assign', name, expr, pos } satisfies AssignStmt
+    }
+    const expr = this.parseExpression()
+    return { kind: 'expr-stmt', expr, pos } satisfies ExprStmt
+  }
+
+  // ─── State (sthiti-block) ────────────────────────────────────────────────────
+
+  private parseSthitiBlock(): SthitiBlock {
+    const pos = this.pos()
+    this.eat(TokenKind.STHITI, 'sthiti block')
+    this.eat(TokenKind.LBRACE, 'sthiti block')
+    const fields: SthitiField[] = []
+    while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
+      const fpos = this.pos()
+      const optional = this.tryEat(TokenKind.VIKALPA) !== null
+      const name = this.eat(TokenKind.IDENTIFIER, 'sthiti field name').value
+      this.eat(TokenKind.LPAREN, `sthiti field '${name}'`)
+      const type = this.parseType()
+      this.eat(TokenKind.RPAREN, `sthiti field '${name}'`)
+      const init = this.tryEat(TokenKind.EQ) ? this.parseExpression() : undefined
+      fields.push({ kind: 'sthiti-field', name, type, optional, init, pos: fpos })
+    }
+    this.eat(TokenKind.RBRACE, 'sthiti block')
+    return { kind: 'sthiti-block', fields, pos }
+  }
+
+  private parseArgList(): Expression[] {
+    const args: Expression[] = []
+    if (!this.check(TokenKind.RPAREN)) {
+      args.push(this.parseExpression())
+      while (this.tryEat(TokenKind.COMMA)) args.push(this.parseExpression())
+    }
+    return args
   }
 }
 

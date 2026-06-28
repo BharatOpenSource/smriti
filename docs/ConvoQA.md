@@ -143,6 +143,13 @@ This is architectural coherence from first principles, not coincidence.
 - `varna` (color) as variable name is historically grounded: Indian mathematics used color names for unknowns.
 - `vikalpa` is Panini's term for optional rules — directly applicable here.
 
+**Computation (2 terms) — locked 2026-06-28**
+
+| Term | Devanagari | Meaning |
+|------|-----------|---------|
+| kriya | क्रिया | Named reusable computation block (function). Panini's term for verbal root/action. |
+| sparsha | स्पर्श | Effect declaration block inside impure kriya — "what it touches externally" (HTTP, file, events). |
+
 ### Toolchain — locked 2026-06-27
 
 - **Implementation language:** TypeScript

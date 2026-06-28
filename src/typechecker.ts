@@ -3,6 +3,8 @@ import type {
   FlowDecl, FlowItem, PadaDecl, VibhagaDecl,
   TypedField, SmritiType, Pos,
   Expression, GhatanaDecl,
+  KriyaDecl, SparshaDecl,
+  SthitiBlock,
 } from './ast.js'
 import { nameRefStr } from './ast.js'
 import type { ResolveContext } from './resolver.js'
@@ -51,13 +53,29 @@ class Checker {
   }
 
   checkFile(file: SmritiFile) {
+    // Build a file-wide set of impure kriya names (those with sparsha blocks).
+    // Used to enforce the pure-by-default guarantee: pure kriya cannot call impure ones.
+    const impureKriya = this.collectImpureKriya(file)
     for (const decl of file.decls) {
-      if (decl.kind === 'smriti') this.checkSmriti(decl)
-      else this.checkSutra(decl)
+      if (decl.kind === 'smriti')      this.checkSmriti(decl, impureKriya)
+      else if (decl.kind === 'sutra')  this.checkSutra(decl, impureKriya)
+      else if (decl.kind === 'kriya')  this.checkKriya(decl, impureKriya)
     }
   }
 
-  private checkSmriti(decl: SmritiDecl) {
+  // Collects all kriya names that have a sparsha block (top-level + scoped).
+  private collectImpureKriya(file: SmritiFile): Set<string> {
+    const names = new Set<string>()
+    for (const decl of file.decls) {
+      if (decl.kind === 'kriya' && decl.sparsha) names.add(decl.name)
+      if (decl.kind === 'smriti' || decl.kind === 'sutra') {
+        for (const k of decl.kriya) if (k.sparsha) names.add(k.name)
+      }
+    }
+    return names
+  }
+
+  private checkSmriti(decl: SmritiDecl, impureKriya: Set<string>) {
     this.checkIti(decl.name, decl.itiName, decl.pos)
     const participantNames = new Set(decl.participants.map(p => p.name))
     for (const p of decl.participants) this.checkIti(p.name, p.itiName, p.pos)
@@ -66,6 +84,8 @@ class Checker {
     // Smriti-level aagama are process inputs from the caller — pre-seeded as produced.
     const externalInputs = new Map<string, SmritiType>()
     if (decl.aagama) for (const f of decl.aagama) externalInputs.set(f.name, f.type)
+    for (const k of decl.kriya) this.checkKriya(k, impureKriya)
+    if (decl.sthitiBlock) this.checkSthitiBlock(decl.sthitiBlock)
     if (decl.trigger) this.checkGhatana(decl.trigger, externalInputs)
     if (decl.flow) this.checkFlow(decl.flow, participantNames, externalInputs)
   }
@@ -98,7 +118,7 @@ class Checker {
     if (ghatana.kaarya) this.checkExpression(ghatana.kaarya)
   }
 
-  private checkSutra(decl: SutraDecl) {
+  private checkSutra(decl: SutraDecl, impureKriya: Set<string>) {
     this.checkIti(decl.name, decl.itiName, decl.pos)
     if (decl.aagama)  this.checkTypedFields(decl.aagama)
     if (decl.nirgama) this.checkTypedFields(decl.nirgama)
@@ -107,6 +127,8 @@ class Checker {
     if (decl.aagama) for (const f of decl.aagama) externalInputs.set(f.name, f.type)
     // aadesha steps must reference a pada that exists in the flow (no parent context here —
     // full inheritance check runs only when the merged sutra is assembled by the resolver).
+    for (const k of decl.kriya) this.checkKriya(k, impureKriya)
+    if (decl.sthitiBlock) this.checkSthitiBlock(decl.sthitiBlock)
     for (const item of decl.flow.items) {
       if (item.kind === 'aadesha') this.checkPada(item.pada, new Set(), new Set())
     }
@@ -126,6 +148,9 @@ class Checker {
       case 'compare':        return 'tarka'     // comparison always yields tarka
       case 'logical':        return 'tarka'
       case 'not':            return 'tarka'
+      case 'negate':         return 'number'
+      case 'arith':          return 'number'
+      case 'call':           return 'unknown'   // resolved when kriya typechecker runs
     }
   }
 
@@ -180,6 +205,35 @@ class Checker {
             expr.pos,
           )
         }
+        return
+      }
+
+      case 'negate': {
+        this.checkExpression(expr.operand)
+        const t = this.exprType(expr.operand)
+        if (t === 'tarka' || t === 'string') {
+          this.fail(`unary '-' applied to ${t} — expected numeric expression`, expr.pos)
+        }
+        return
+      }
+
+      case 'arith': {
+        this.checkExpression(expr.left)
+        this.checkExpression(expr.right)
+        const lt = this.exprType(expr.left)
+        const rt = this.exprType(expr.right)
+        if (lt === 'tarka' || lt === 'string') {
+          this.fail(`left side of '${expr.op}' is ${lt} — expected numeric expression`, expr.left.pos)
+        }
+        if (rt === 'tarka' || rt === 'string') {
+          this.fail(`right side of '${expr.op}' is ${rt} — expected numeric expression`, expr.right.pos)
+        }
+        return
+      }
+
+      case 'call': {
+        // Arg expressions are type-checked. Callee resolution deferred to kriya phase (Layer 1).
+        for (const arg of expr.args) this.checkExpression(arg)
         return
       }
     }
@@ -508,6 +562,117 @@ class Checker {
           `vibhaga '${vibhaga.on}' on tarka is missing cases: ${missing.join(', ')} — avyakta must always be handled`,
           vibhaga.pos,
         )
+      }
+    }
+  }
+
+  // ─── Computation (kriya) ──────────────────────────────────────────────────
+
+  private checkKriya(decl: KriyaDecl, impureKriya: Set<string> = new Set()) {
+    this.checkIti(decl.name, decl.itiName, decl.pos)
+    this.checkTypedFields(decl.aagama)
+    this.checkTypedFields(decl.nirgama)
+    if (decl.sparsha) this.checkSparsha(decl.sparsha)
+    if (decl.sthitiBlock) this.checkSthitiBlock(decl.sthitiBlock)
+
+    // A kriya without sparsha is pure. Track whether this one is impure.
+    const thisIsPure = !decl.sparsha
+
+    // Names available in the body: aagama inputs + sthiti cells (pre-initialised), then assigns.
+    const produced = new Set<string>(decl.aagama.map(f => f.name))
+    if (decl.sthitiBlock) for (const f of decl.sthitiBlock.fields) produced.add(f.name)
+
+    for (const stmt of decl.body) {
+      if (stmt.kind === 'assign') {
+        this.checkExprPurity(stmt.expr, decl.name, thisIsPure, impureKriya)
+        produced.add(stmt.name)
+      } else {
+        this.checkExprPurity(stmt.expr, decl.name, thisIsPure, impureKriya)
+      }
+    }
+
+    // Every required nirgama field must be assigned at least once in the body.
+    for (const f of decl.nirgama) {
+      if (!f.optional && !produced.has(f.name)) {
+        this.fail(
+          `nirgama '${f.name}' (${typeStr(f.type)}) is never assigned in kriya '${decl.name}'`,
+          decl.pos,
+        )
+      }
+    }
+  }
+
+  // checkExprPurity: type-checks an expression AND, when inside a pure kriya,
+  // rejects calls to impure kriya (those with sparsha blocks).
+  private checkExprPurity(expr: Expression, callerName: string, callerIsPure: boolean, impureKriya: Set<string>) {
+    this.checkExpression(expr)
+    if (callerIsPure && expr.kind === 'call') {
+      const callee = typeof expr.callee === 'string' ? expr.callee : expr.callee.name
+      if (impureKriya.has(callee)) {
+        this.fail(
+          `pure kriya '${callerName}' calls impure kriya '${callee}' — ` +
+          `add a sparsha block to '${callerName}' to declare its effects`,
+          expr.pos,
+        )
+      }
+      // Recurse into args (they may contain nested calls)
+      for (const arg of expr.args) this.checkExprPurity(arg, callerName, callerIsPure, impureKriya)
+      return
+    }
+    // For non-call expressions, recurse into sub-expressions for purity checking
+    if (expr.kind === 'compare' || expr.kind === 'logical' || expr.kind === 'arith') {
+      this.checkExprPurity(expr.left, callerName, callerIsPure, impureKriya)
+      this.checkExprPurity(expr.right, callerName, callerIsPure, impureKriya)
+    }
+    if (expr.kind === 'not' || expr.kind === 'negate') {
+      this.checkExprPurity(expr.operand, callerName, callerIsPure, impureKriya)
+    }
+  }
+
+  private checkSparsha(decl: SparshaDecl) {
+    const CHANNELS = new Set(['http', 'file', 'event'])
+    const MODES    = new Set(['read', 'write', 'emit', 'read-write'])
+    for (const f of decl.fields) {
+      if (!CHANNELS.has(f.channel)) {
+        this.fail(`unknown effect channel '${f.channel}' — valid: http, file, event`, f.pos)
+      }
+      if (!MODES.has(f.mode)) {
+        this.fail(`unknown effect mode '${f.mode}' — valid: read, write, emit, read-write`, f.pos)
+      }
+    }
+  }
+
+  // ─── State (sthiti-block) ─────────────────────────────────────────────────
+
+  // Maps a SmritiType to the coarse expression-type category used by exprType().
+  private smritiTypeCategory(t: SmritiType): 'tarka' | 'number' | 'string' | 'complex' {
+    switch (t.kind) {
+      case 'sankhya': case 'bhinnaanka': case 'dashaamsha': return 'number'
+      case 'vakya':   return 'string'
+      case 'tarka':   return 'tarka'
+      default:        return 'complex'   // tithi, antara, patra, krama, kosa — skip init check
+    }
+  }
+
+  private checkSthitiBlock(block: SthitiBlock) {
+    const seen = new Set<string>()
+    for (const f of block.fields) {
+      if (seen.has(f.name)) {
+        this.fail(`Duplicate sthiti field '${f.name}'`, f.pos)
+      }
+      seen.add(f.name)
+      this.checkType(f.type, f.pos)
+      if (f.init) {
+        this.checkExpression(f.init)
+        const exprCat  = this.exprType(f.init)
+        const fieldCat = this.smritiTypeCategory(f.type)
+        // Only flag if both sides are concrete and they disagree.
+        if (exprCat !== 'unknown' && fieldCat !== 'complex' && exprCat !== fieldCat) {
+          this.fail(
+            `sthiti '${f.name}': init value is ${exprCat} but field type is ${typeStr(f.type)}`,
+            f.pos,
+          )
+        }
       }
     }
   }

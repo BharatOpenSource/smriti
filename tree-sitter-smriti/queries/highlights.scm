@@ -1,12 +1,12 @@
 ; Syntax highlighting queries for Smriti (.smr files).
 ; Compatible with Neovim (nvim-treesitter) and GitHub Linguist.
 ; Highlight group names follow nvim-treesitter conventions.
-; Mirrors spec/grammar.ebnf v0.3.
+; Mirrors spec/grammar.ebnf v0.4.
 
 ; ─── Structure keywords ────────────────────────────────────────────────────────
 
 [
-  "smriti" "sutra" "iti"
+  "smriti" "sutra" "kriya" "iti"
   "pravah" "pada" "aadesha"
   "paksha" "sangama" "lagna"
   "ghatana" "anuvrtti"
@@ -21,6 +21,7 @@
   "apavaada" "samapti"
   "pravritti" "prativritti"
   "prati"
+  "sparsha"
 ] @keyword.control
 
 ; ─── Terminal keywords ────────────────────────────────────────────────────────
@@ -80,6 +81,33 @@
 (vibhaga_decl on: (identifier)     @variable)
 (anuvrtti     parent: (name_ref)   @module)
 
+; ─── Computation (kriya) ──────────────────────────────────────────────────────
+
+; kriya declaration name → function definition
+(kriya_decl name: (identifier) @function.definition)
+
+; sthiti field names → mutable state variables
+(sthiti_field name: (identifier) @variable.member)
+
+; assignment target in kriya body → local variable
+(assign_stmt name: (identifier) @variable)
+
+; call expression — local callee
+(call_expr callee: (name_ref (identifier) @function.call))
+
+; call expression — qualified callee (namespace.fn)
+(call_expr callee: (name_ref
+  (qualified_name
+    namespace: (identifier) @module
+    member:    (identifier) @function.call)))
+
+; sparsha effect channels (http, file, event) and modes (read, write, emit, read-write)
+(sparsha_field channel: (identifier) @constant.builtin)
+(sparsha_field mode:    (identifier) @string.special)
+
+; kaarya: kriya invocation — the call target
+(kaarya_value (call_expr callee: (name_ref (identifier) @function.call)))
+
 ; iti close marker — label should match the opening name
 (iti label: (identifier) @module)
 
@@ -107,10 +135,11 @@
 
 ; ─── Operators ────────────────────────────────────────────────────────────────
 
-(arrow) @operator
+(arrow)      @operator
 (compare_op) @operator
-["||" "&&"] @operator
-["!" "="] @operator
+["||" "&&"]  @operator
+["!" "="]    @operator
+["+" "-" "*" "/" "%"] @operator
 ".." @operator
 
 ; ─── Literals ─────────────────────────────────────────────────────────────────

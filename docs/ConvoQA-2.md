@@ -94,6 +94,64 @@ Current implementation covers: metadata, sequential steps, binary/trivalent bran
 - Backend: `src/backends/sutra-yaml.ts` → `toSutraYaml(SutraDecl)`
 - Intended use: publish the interface of a `.sut` for consumers who want to know its contract
 
+### kriya — locked 2026-06-28
+
+- `kriya` (क्रिया) — named reusable computation block (function). Panini's term for verbal root/action — the action itself, not a description of one.
+- Distinct from `kaarya` (already taken: "what a step does" on a `pada`). `kriya` *is* the action; `kaarya` is the duty/task assigned to a step.
+
+**Syntax — locked 2026-06-28:**
+- `aagama`/`nirgama` blocks for inputs/outputs (consistent with `pada` and `sutra` — one pattern everywhere)
+- Scope: both top-level in a `.smr`/`.sut` file (shared, importable via `sangama`) and inside `smriti`/`sutra` blocks (private/scoped)
+- Call from flow — two forms:
+  1. **Inline:** `varna name : type = kriya-name(args)` — for simple, single-assignment calls
+  2. **Step:** `pada` with `kaarya: kriya name(args)` + `nirgama` — for named, multi-output, or actor-bound calls
+- Effect declaration: `sparsha` block inside impure kriya lists what the kriya touches externally (`http: read`, `file: write`, `event: emit`)
+- Pure by default — no `sparsha` block means the compiler enforces no side effects
+
+```
+kriya validate-amount {
+  aagama
+    amount   : sankhya
+    currency : vakya
+
+  nirgama
+    result   : tarka
+    reason   : vakya vikalpa
+
+  result = amount > 0
+  reason = "amount must be positive"
+}
+
+kriya fetch-gstin-status {
+  sparsha
+    http: read
+
+  aagama gstin   : vakya
+  nirgama status : vakya
+}
+```
+
+### Smriti capability expansion — decided 2026-06-28
+
+Smriti's ambition is wider than process description. The language will grow to become self-sufficient — capable of building platforms like pravaaha end-to-end. Seven capability layers identified, to be built in sequence:
+
+| Layer | Capability | Key concept | Status |
+|-------|-----------|-------------|--------|
+| 1 | Full computation + functions | `kriya` | Next |
+| 2 | Mutable state | `sthiti` (already in vocabulary) | Follows L1 |
+| 3 | I/O and effects | effect system, HTTP, file | Follows L2 |
+| 4 | Runtime / executor | `smr run` | Follows L3 |
+| 5 | API / service layer | `seva` (proposed) | Follows L4 |
+| 6 | Persistence | `sangraha` (proposed) | Follows L5 |
+| 7 | UI / component model | `darshana` (proposed) | Far |
+
+New vocabulary proposed (not yet locked — to be decided before implementation):
+- `seva` (सेवा) — named HTTP endpoint / service declaration
+- `sangraha` (संग्रह) — persistent typed store (key-value, document, or relational backend)
+- `darshana` (दर्शन) — UI component / view (declarative layout + data binding)
+
+Full roadmap with sequencing: see `docs/roadmap.md`.
+
 ## Open Questions / Tasks
 
 - [x] Cross-file resolution: `sangama` resolver, `RelativeFileResolver`, `RegistryResolver` stub

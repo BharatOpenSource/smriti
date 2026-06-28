@@ -1,5 +1,5 @@
 // Tree-sitter grammar for the Smriti language (.smr files).
-// Mirrors spec/grammar.ebnf v0.3.
+// Mirrors spec/grammar.ebnf v0.4.
 //
 // Generate the C parser:   npx tree-sitter generate
 // Test against a file:     npx tree-sitter parse examples/sample.smr
@@ -23,7 +23,7 @@ module.exports = grammar({
     // ─── Top level ──────────────────────────────────────────────────────────
 
     source_file: $ => repeat(
-      choice($.smriti_decl, $.sutra_decl)
+      choice($.smriti_decl, $.sutra_decl, $.kriya_decl)
     ),
 
     smriti_decl: $ => seq(
@@ -60,6 +60,8 @@ module.exports = grammar({
       $.reference,
       $.participant,
       $.trigger,
+      $.kriya_decl,
+      $.sthiti_block,
       $.flow,
     )),
 
@@ -67,6 +69,8 @@ module.exports = grammar({
       $.metadata,
       $.aagama_decl,
       $.nirgama_decl,
+      $.kriya_decl,
+      $.sthiti_block,
       $.flow,
     )),
 
@@ -153,11 +157,87 @@ module.exports = grammar({
       $.kaarya_trigger_decl,
     ),
 
-    vrtti_decl:        $ => seq('vrtti',  ':', $.expression),
-    hetu_decl:         $ => seq('hetu',   ':', 'prati', $.number, $.identifier),
+    vrtti_decl:          $ => seq('vrtti',  ':', $.expression),
+    hetu_decl:           $ => seq('hetu',   ':', 'prati', $.number, $.identifier),
     karta_trigger_decl:  $ => seq('karta',  ':', $.expression),
     sthala_trigger_decl: $ => seq('sthala', ':', $.expression),
     kaarya_trigger_decl: $ => seq('kaarya', ':', $.expression),
+
+    // ─── Computation (kriya) ────────────────────────────────────────────────
+
+    kriya_decl: $ => seq(
+      'kriya',
+      field('name', $.identifier),
+      '{',
+      optional($.kriya_body),
+      '}',
+      optional($.iti),
+    ),
+
+    // Permissive ordering: tree-sitter is used during editing.
+    kriya_body: $ => repeat1(choice(
+      $.sparsha_decl,
+      $.aagama_decl,
+      $.nirgama_decl,
+      $.sthiti_block,
+      $.kriya_stmt,
+    )),
+
+    // ─── Effects (sparsha) ──────────────────────────────────────────────────
+
+    sparsha_decl: $ => seq(
+      'sparsha',
+      '{',
+      repeat1($.sparsha_field),
+      '}',
+    ),
+
+    // channel: http | file | event    mode: read | write | emit | read-write
+    // Both are plain identifiers (read-write is a hyphenated identifier).
+    sparsha_field: $ => seq(
+      field('channel', $.identifier),
+      ':',
+      field('mode', $.identifier),
+    ),
+
+    // ─── State (sthiti-block) ───────────────────────────────────────────────
+
+    // sthiti_block: declares named, typed, optionally-initialised mutable state cells.
+    // Valid inside kriya_body, smriti_body, and sutra_body.
+    sthiti_block: $ => seq(
+      'sthiti',
+      '{',
+      repeat($.sthiti_field),
+      '}',
+    ),
+
+    // sthiti_field: vikalpa? name (type) (= init)?
+    sthiti_field: $ => seq(
+      optional('vikalpa'),
+      field('name', $.identifier),
+      '(',
+      field('type', $.type),
+      ')',
+      optional(seq('=', field('init', $._expr))),
+    ),
+
+    // ─── Kriya statements ───────────────────────────────────────────────────
+
+    kriya_stmt: $ => choice(
+      $.assign_stmt,
+      $.expr_stmt,
+    ),
+
+    // assign_stmt: identifier = expression (local variable assignment)
+    // Higher precedence than expr_stmt to resolve the identifier ambiguity.
+    assign_stmt: $ => prec(1, seq(
+      field('name', $.identifier),
+      '=',
+      field('value', $._expr),
+    )),
+
+    // expr_stmt: a bare expression (function call for side effects, or tarka terminal)
+    expr_stmt: $ => $._expr,
 
     // ─── Flow ───────────────────────────────────────────────────────────────
 
@@ -229,8 +309,14 @@ module.exports = grammar({
       $.routing,
     )),
 
-    karta_decl:   $ => seq('karta',   ':', $.name_ref),
-    kaarya_decl:  $ => seq('kaarya',  ':', $.string),
+    karta_decl:  $ => seq('karta', ':', $.name_ref),
+    // kaarya: accepts a plain string label, or a kriya-prefixed call expression.
+    kaarya_decl: $ => seq('kaarya', ':', $.kaarya_value),
+    kaarya_value: $ => choice(
+      $.string,
+      seq('kriya', $.call_expr),
+    ),
+
     aagama_decl:  $ => seq('aagama',  ':', $.typed_field, repeat(seq(',', $.typed_field))),
     nirgama_decl: $ => seq('nirgama', ':', $.typed_field, repeat(seq(',', $.typed_field))),
     samaya_decl:  $ => seq('samaya',  ':', $.number, $.time_unit),
@@ -341,8 +427,10 @@ module.exports = grammar({
     time_unit: _ => 'antara',
 
     // ─── Expressions ────────────────────────────────────────────────────────
-    // Recursive expression grammar matching spec/grammar.ebnf.
-    // Precedence (high → low): not, comparison, logical-and, logical-or.
+    // Recursive expression grammar matching spec/grammar.ebnf v0.4.
+    // Precedence tower (low → high):
+    //   logical-or(1) < logical-and(2) < comparison(3)
+    //   < additive(4) < multiplicative(5) < unary(6) < not(7)
 
     expression: $ => $._expr,
 
@@ -350,6 +438,9 @@ module.exports = grammar({
       $.or_expr,
       $.and_expr,
       $.cmp_expr,
+      $.add_expr,
+      $.mul_expr,
+      $.neg_expr,
       $.not_expr,
       $.primary,
     ),
@@ -357,14 +448,28 @@ module.exports = grammar({
     or_expr:  $ => prec.left(1, seq($._expr, '||', $._expr)),
     and_expr: $ => prec.left(2, seq($._expr, '&&', $._expr)),
     cmp_expr: $ => prec.left(3, seq($._expr, $.compare_op, $._expr)),
-    not_expr: $ => prec.right(4, seq('!', $._expr)),
+    add_expr: $ => prec.left(4, seq($._expr, choice('+', '-'), $._expr)),
+    mul_expr: $ => prec.left(5, seq($._expr, choice('*', '/', '%'), $._expr)),
+    neg_expr: $ => prec.right(6, seq('-', $._expr)),
+    not_expr: $ => prec.right(7, seq('!', $._expr)),
+
+    // call_expr is tried before name_ref in primary (prec(1) ensures preference).
+    call_expr: $ => prec(1, seq(
+      field('callee', $.name_ref),
+      '(',
+      optional($.arg_list),
+      ')',
+    )),
+
+    arg_list: $ => seq($._expr, repeat(seq(',', $._expr))),
 
     primary: $ => choice(
       $.tarka_value,
       $.number,
       $.string,
-      $.identifier,
-      seq('(', $.expression, ')'),
+      $.call_expr,
+      $.name_ref,
+      seq('(', $._expr, ')'),
     ),
 
     compare_op: _ => choice('==', '!=', '<', '>', '<=', '>='),

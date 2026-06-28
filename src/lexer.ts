@@ -25,6 +25,9 @@ export const enum TokenKind {
   ANUBHAGA = 'anubhaga', ANUGAMA = 'anugama',
   AAVAHA = 'aavaha',
 
+  // Computation keywords
+  KRIYA = 'kriya', SPARSHA = 'sparsha',
+
   // Data keywords
   VARNA = 'varna', STHITI = 'sthiti',
 
@@ -65,6 +68,7 @@ export const enum TokenKind {
   LTE = '<=',  GTE = '>=',
   AND = '&&',  OR = '||',
   BANG = '!',
+  PLUS = '+', MINUS = '-', STAR = '*', SLASH = '/', PERCENT = '%',
 
   EOF = 'eof',
 }
@@ -101,7 +105,8 @@ const KEYWORDS: Record<string, TokenKind> = {
   vibhaga: TokenKind.VIBHAGA,     niyama: TokenKind.NIYAMA,
   anubhaga: TokenKind.ANUBHAGA,   anugama: TokenKind.ANUGAMA,
   aavaha: TokenKind.AAVAHA,       varna: TokenKind.VARNA,
-  sthiti: TokenKind.STHITI,       sankhya: TokenKind.SANKHYA,
+  sthiti: TokenKind.STHITI,       kriya: TokenKind.KRIYA,
+  sparsha: TokenKind.SPARSHA,     sankhya: TokenKind.SANKHYA,
   bhinnaanka: TokenKind.BHINNAANKA, dashaamsha: TokenKind.DASHAAMSHA,
   vakya: TokenKind.VAKYA,         tithi: TokenKind.TITHI,
   antara: TokenKind.ANTARA,       tarka: TokenKind.TARKA,
@@ -154,11 +159,18 @@ export function lex(source: string): Token[] {
       continue
     }
 
-    // Arrow ASCII fallback: ->
+    // Arrow ASCII fallback: -> (checked before standalone MINUS)
     if (ch === '-' && peek(1) === '>') {
       tokens.push({ kind: TokenKind.ARROW, value: '→', pos: pos() })
       i += 2; continue
     }
+
+    // Arithmetic operators (MINUS after -> so -> still wins)
+    if (ch === '+') { tokens.push({ kind: TokenKind.PLUS,    value: '+', pos: pos() }); i++; continue }
+    if (ch === '-') { tokens.push({ kind: TokenKind.MINUS,   value: '-', pos: pos() }); i++; continue }
+    if (ch === '*') { tokens.push({ kind: TokenKind.STAR,    value: '*', pos: pos() }); i++; continue }
+    if (ch === '/') { tokens.push({ kind: TokenKind.SLASH,   value: '/', pos: pos() }); i++; continue }
+    if (ch === '%') { tokens.push({ kind: TokenKind.PERCENT, value: '%', pos: pos() }); i++; continue }
 
     // Multi-character expression operators — checked before single-char
     if (ch === '=' && peek(1) === '=') { tokens.push({ kind: TokenKind.EQEQ, value: '==', pos: pos() }); i += 2; continue }

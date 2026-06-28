@@ -27,7 +27,7 @@ export interface Node {
 
 export interface SmritiFile extends Node {
   kind: 'file'
-  decls: (SmritiDecl | SutraDecl)[]
+  decls: (SmritiDecl | SutraDecl | KriyaDecl)[]
 }
 
 export interface SmritiDecl extends Node {
@@ -37,6 +37,8 @@ export interface SmritiDecl extends Node {
   metadata: Metadata
   references: ReferenceDecl[]
   participants: PakshaDecl[]
+  kriya: KriyaDecl[]      // scoped private kriya — not importable from outside
+  sthitiBlock?: SthitiBlock  // process-scoped mutable state (managed by Layer 4 executor)
   trigger?: GhatanaDecl
   aagama?: TypedField[]   // process-level inputs (available throughout the flow)
   nirgama?: TypedField[]  // process-level outputs (declared intent)
@@ -50,6 +52,8 @@ export interface SutraDecl extends Node {
   metadata: Metadata
   parent?: NameRef        // anuvṛtti — inherits from this sutra
   aagama?: TypedField[]   // additional aagama (merged with parent's)
+  kriya: KriyaDecl[]      // scoped private kriya for this sutra
+  sthitiBlock?: SthitiBlock  // sutra-scoped mutable state
   flow: FlowDecl          // delta: aadesha overrides + new steps + terminals
   nirgama?: TypedField[]  // additional nirgama (merged with parent's)
 }
@@ -156,7 +160,7 @@ export interface PadaDecl extends Node {
   name: string
   itiName?: string
   karta?: NameRef
-  kaarya?: string
+  kaarya?: string | CallExpr  // string = human description; CallExpr = kriya invocation
   aagama: TypedField[]
   nirgama: TypedField[]
   samaya?: Duration
@@ -228,6 +232,73 @@ export interface SthitiDecl extends Node {
   name: string
 }
 
+// ─── State (sthiti) ───────────────────────────────────────────────────────────
+
+// sthiti-field: a named, typed, optionally-initialised mutable state cell.
+// Used in sthiti-block inside smriti, sutra, or kriya.
+export interface SthitiField extends Node {
+  kind: 'sthiti-field'
+  name: string
+  type: SmritiType
+  optional: boolean   // declared with `vikalpa` — starts null and may stay null
+  init?: Expression   // initial value (null/avyakta if absent)
+}
+
+// sthiti-block: the state declaration block.
+// Inside kriya: cells are re-initialised on each call (call-local state).
+// Inside smriti/sutra: cells are initialised once when the process starts
+//   and are managed by the Layer 4 process executor.
+export interface SthitiBlock extends Node {
+  kind: 'sthiti-block'
+  fields: SthitiField[]
+}
+
+// ─── Computation (kriya) ──────────────────────────────────────────────────────
+
+export interface KriyaDecl extends Node {
+  kind: 'kriya'
+  name: string
+  itiName?: string
+  sparsha?: SparshaDecl   // present = impure; absent = pure (compiler enforces)
+  aagama: TypedField[]
+  nirgama: TypedField[]
+  sthitiBlock?: SthitiBlock  // kriya-local mutable state (re-initialised per call)
+  body: KriyaStmt[]
+}
+
+// ─── Effects (sparsha) ────────────────────────────────────────────────────────
+
+export interface SparshaDecl extends Node {
+  kind: 'sparsha'
+  fields: SparshaField[]
+}
+
+export type EffectChannel = 'http' | 'file' | 'event'
+export type EffectMode = 'read' | 'write' | 'emit' | 'read-write'
+
+export interface SparshaField extends Node {
+  kind: 'sparsha-field'
+  channel: EffectChannel
+  mode: EffectMode
+}
+
+// ─── kriya statements ─────────────────────────────────────────────────────────
+
+export type KriyaStmt = AssignStmt | ExprStmt
+
+// assign-stmt: name = expression. name must be a declared nirgama field or local binding.
+export interface AssignStmt extends Node {
+  kind: 'assign'
+  name: string
+  expr: Expression
+}
+
+// expr-stmt: expression evaluated for side effects only (e.g. calling an impure kriya).
+export interface ExprStmt extends Node {
+  kind: 'expr-stmt'
+  expr: Expression
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface TypedField extends Node {
@@ -259,6 +330,9 @@ export type Expression =
   | CompareExpr
   | LogicalExpr
   | NotExpr
+  | NegateExpr
+  | ArithExpr
+  | CallExpr
 
 export interface TarkaLiteral extends Node {
   kind: 'tarka-literal'
@@ -303,6 +377,26 @@ export interface NotExpr extends Node {
   operand: Expression
 }
 
+export interface NegateExpr extends Node {
+  kind: 'negate'
+  operand: Expression
+}
+
+export type ArithOp = '+' | '-' | '*' | '/' | '%'
+
+export interface ArithExpr extends Node {
+  kind: 'arith'
+  left: Expression
+  op: ArithOp
+  right: Expression
+}
+
+export interface CallExpr extends Node {
+  kind: 'call'
+  callee: NameRef
+  args: Expression[]
+}
+
 // Render any expression to a human-readable string (for backends/diagnostics).
 export function exprStr(expr: Expression): string {
   switch (expr.kind) {
@@ -313,5 +407,8 @@ export function exprStr(expr: Expression): string {
     case 'compare':        return `${exprStr(expr.left)} ${expr.op} ${exprStr(expr.right)}`
     case 'logical':        return `(${exprStr(expr.left)} ${expr.op} ${exprStr(expr.right)})`
     case 'not':            return `!${exprStr(expr.operand)}`
+    case 'negate':         return `-${exprStr(expr.operand)}`
+    case 'arith':          return `(${exprStr(expr.left)} ${expr.op} ${exprStr(expr.right)})`
+    case 'call':           return `${nameRefStr(expr.callee)}(${expr.args.map(exprStr).join(', ')})`
   }
 }

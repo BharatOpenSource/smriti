@@ -14,6 +14,10 @@
           {
             "type": "SYMBOL",
             "name": "sutra_decl"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "kriya_decl"
           }
         ]
       }
@@ -193,6 +197,14 @@
           },
           {
             "type": "SYMBOL",
+            "name": "kriya_decl"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "sthiti_block"
+          },
+          {
+            "type": "SYMBOL",
             "name": "flow"
           }
         ]
@@ -214,6 +226,14 @@
           {
             "type": "SYMBOL",
             "name": "nirgama_decl"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "kriya_decl"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "sthiti_block"
           },
           {
             "type": "SYMBOL",
@@ -852,6 +872,268 @@
         }
       ]
     },
+    "kriya_decl": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "kriya"
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "{"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "kriya_body"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": "}"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "iti"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        }
+      ]
+    },
+    "kriya_body": {
+      "type": "REPEAT1",
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "sparsha_decl"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "aagama_decl"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "nirgama_decl"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "sthiti_block"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "kriya_stmt"
+          }
+        ]
+      }
+    },
+    "sparsha_decl": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "sparsha"
+        },
+        {
+          "type": "STRING",
+          "value": "{"
+        },
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "sparsha_field"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "}"
+        }
+      ]
+    },
+    "sparsha_field": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "channel",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "FIELD",
+          "name": "mode",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        }
+      ]
+    },
+    "sthiti_block": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "sthiti"
+        },
+        {
+          "type": "STRING",
+          "value": "{"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "sthiti_field"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "}"
+        }
+      ]
+    },
+    "sthiti_field": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "vikalpa"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "FIELD",
+          "name": "type",
+          "content": {
+            "type": "SYMBOL",
+            "name": "type"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "="
+                },
+                {
+                  "type": "FIELD",
+                  "name": "init",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_expr"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        }
+      ]
+    },
+    "kriya_stmt": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "assign_stmt"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "expr_stmt"
+        }
+      ]
+    },
+    "assign_stmt": {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "SYMBOL",
+              "name": "identifier"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "="
+          },
+          {
+            "type": "FIELD",
+            "name": "value",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_expr"
+            }
+          }
+        ]
+      }
+    },
+    "expr_stmt": {
+      "type": "SYMBOL",
+      "name": "_expr"
+    },
     "flow": {
       "type": "SEQ",
       "members": [
@@ -1159,7 +1441,29 @@
         },
         {
           "type": "SYMBOL",
+          "name": "kaarya_value"
+        }
+      ]
+    },
+    "kaarya_value": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
           "name": "string"
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "kriya"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "call_expr"
+            }
+          ]
         }
       ]
     },
@@ -1975,6 +2279,18 @@
         },
         {
           "type": "SYMBOL",
+          "name": "add_expr"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "mul_expr"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "neg_expr"
+        },
+        {
+          "type": "SYMBOL",
           "name": "not_expr"
         },
         {
@@ -2046,9 +2362,90 @@
         ]
       }
     },
+    "add_expr": {
+      "type": "PREC_LEFT",
+      "value": 4,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "_expr"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "+"
+              },
+              {
+                "type": "STRING",
+                "value": "-"
+              }
+            ]
+          },
+          {
+            "type": "SYMBOL",
+            "name": "_expr"
+          }
+        ]
+      }
+    },
+    "mul_expr": {
+      "type": "PREC_LEFT",
+      "value": 5,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "_expr"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "*"
+              },
+              {
+                "type": "STRING",
+                "value": "/"
+              },
+              {
+                "type": "STRING",
+                "value": "%"
+              }
+            ]
+          },
+          {
+            "type": "SYMBOL",
+            "name": "_expr"
+          }
+        ]
+      }
+    },
+    "neg_expr": {
+      "type": "PREC_RIGHT",
+      "value": 6,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "-"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "_expr"
+          }
+        ]
+      }
+    },
     "not_expr": {
       "type": "PREC_RIGHT",
-      "value": 4,
+      "value": 7,
       "content": {
         "type": "SEQ",
         "members": [
@@ -2062,6 +2459,68 @@
           }
         ]
       }
+    },
+    "call_expr": {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "callee",
+            "content": {
+              "type": "SYMBOL",
+              "name": "name_ref"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "("
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "arg_list"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "STRING",
+            "value": ")"
+          }
+        ]
+      }
+    },
+    "arg_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_expr"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_expr"
+              }
+            ]
+          }
+        }
+      ]
     },
     "primary": {
       "type": "CHOICE",
@@ -2080,7 +2539,11 @@
         },
         {
           "type": "SYMBOL",
-          "name": "identifier"
+          "name": "call_expr"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "name_ref"
         },
         {
           "type": "SEQ",
@@ -2091,7 +2554,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "expression"
+              "name": "_expr"
             },
             {
               "type": "STRING",

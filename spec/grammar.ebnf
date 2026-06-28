@@ -1,27 +1,32 @@
 # Smriti Grammar Specification
-# Version: 0.3
+# Version: 0.5
 # This document is the language standard. The parser (src/parser.ts) implements it.
 # Notation: EBNF — ? = optional, * = zero or more, + = one or more, | = or
 
 # ─── Top level ────────────────────────────────────────────────────────────────
 
-smriti-file  ::= (smriti-decl | sutra-decl)*
+# Top-level kriya are shared and importable via sangama.
+smriti-file  ::= (smriti-decl | sutra-decl | kriya-decl)*
 
 smriti-decl  ::= "smriti" identifier "{" smriti-body "}" iti?
 sutra-decl   ::= "sutra"  identifier anuvrtti? "{" sutra-body "}" iti?
 
-# smriti-body: strict ordering — metadata, I/O, references, participants, trigger, flow.
+# smriti-body: strict ordering — metadata, I/O, references, participants, kriya, sthiti, trigger, flow.
 # pravah is optional — a smriti without pravah is a valid declaration-only block.
+# kriya-decl inside smriti-body are private (scoped) — not importable from outside.
+# sthiti-block in smriti-body declares process-scoped mutable state (managed by Layer 4 executor).
 smriti-body  ::= metadata*
                  aagama-decl?
                  nirgama-decl?
                  reference*
                  participant*
+                 kriya-decl*
+                 sthiti-block?
                  trigger?
                  flow?
 
-# sutra-body: aagama before pravah, nirgama after.
-sutra-body   ::= metadata* aagama-decl? flow nirgama-decl?
+# sutra-body: aagama before pravah, nirgama after. kriya and sthiti are scoped to this sutra.
+sutra-body   ::= metadata* aagama-decl? kriya-decl* sthiti-block? flow nirgama-decl?
 
 # ─── Pāṇinian inheritance (anuvṛtti) ─────────────────────────────────────────
 
@@ -130,7 +135,11 @@ pada-body    ::= karta-decl?
                  routing?
 
 karta-decl      ::= "karta"      ":" name-ref
-kaarya-decl     ::= "kaarya"     ":" string
+# kaarya accepts either a human-readable description (string) or a kriya invocation.
+# The "kriya" keyword prefix distinguishes a function call from a plain description.
+kaarya-decl     ::= "kaarya"     ":" kaarya-value
+kaarya-value    ::= string | kriya-invocation
+kriya-invocation ::= "kriya" name-ref "(" arg-list? ")"
 aagama-decl     ::= "aagama"     ":" typed-field ("," typed-field)*
 nirgama-decl    ::= "nirgama"    ":" typed-field ("," typed-field)*
 samaya-decl     ::= "samaya"     ":" number time-unit
@@ -172,6 +181,36 @@ branch-target ::= identifier | "svasti" | "anaapta"
 anubhaga-decl ::= "anubhaga" "{" flow-item+ "}" ("," "{" flow-item+ "}")+
 anugama-decl  ::= "anugama"  identifier+
 
+# ─── Computation (kriya) ──────────────────────────────────────────────────────
+
+# kriya: named reusable computation block (function).
+# Scope: top-level = shared/importable; inside smriti/sutra = private/scoped.
+# Pure by default — no sparsha block means compiler enforces zero side effects.
+
+kriya-decl   ::= "kriya" identifier "{" kriya-body "}" iti?
+
+# kriya-body: permissive ordering — any section may appear in any order.
+# Sections: sparsha (effects), aagama (inputs), nirgama (outputs), sthiti (local state), stmts.
+kriya-body   ::= (sparsha-decl | aagama-decl | nirgama-decl | sthiti-block | kriya-stmt)*
+
+# Statements inside a kriya body.
+# assign-stmt: binds the result of an expression to a name (must be a nirgama field or local).
+# expr-stmt: evaluates an expression for side effects only (e.g. a sparsha kriya call).
+kriya-stmt   ::= assign-stmt | expr-stmt
+assign-stmt  ::= identifier "=" expression
+expr-stmt    ::= expression
+
+# ─── Effects (sparsha) ────────────────────────────────────────────────────────
+
+# sparsha declares what external systems an impure kriya touches.
+# Omit entirely for pure kriya — the compiler rejects any effect usage without declaration.
+
+sparsha-decl  ::= "sparsha" "{" sparsha-field+ "}"
+sparsha-field ::= effect-channel ":" effect-mode
+
+effect-channel ::= "http" | "file" | "event"
+effect-mode    ::= "read" | "write" | "emit" | "read-write"
+
 # ─── Sub-process invocation ───────────────────────────────────────────────────
 
 # aavaha invokes another process. target is a bare identifier (local step name)
@@ -182,7 +221,14 @@ aavaha-decl   ::= "aavaha" name-ref
 
 # ─── State ────────────────────────────────────────────────────────────────────
 
+# sthiti-decl: flow-level state marker — labels the current step as being in a named state.
 sthiti-decl   ::= "sthiti" identifier
+
+# sthiti-block: mutable state cell declaration.
+# In kriya: cells are re-initialised on each call (call-local state).
+# In smriti/sutra: cells are initialised once when the process starts (process-scoped, Layer 4+).
+sthiti-block  ::= "sthiti" "{" sthiti-field* "}"
+sthiti-field  ::= "vikalpa"? identifier "(" type ")" ("=" expression)?
 
 # ─── Name references ──────────────────────────────────────────────────────────
 
@@ -219,15 +265,24 @@ time-unit    ::= "antara"
 # ─── Expressions ──────────────────────────────────────────────────────────────
 
 # Full recursive descent. Precedence low-to-high:
-#   logical-or → logical-and → comparison → not → primary
+#   logical-or → logical-and → comparison → additive → multiplicative → unary → primary
+#
+# call-expr: kriya invocation as an expression — usable anywhere a value is expected,
+#   including varna bindings, assign-stmt, and argument lists (nested calls).
 
-expression   ::= logical-or
+expression      ::= logical-or
 
-logical-or   ::= logical-and ("||" logical-and)*
-logical-and  ::= comparison  ("&&" comparison)*
-comparison   ::= not (compare-op not)?
-not          ::= "!" not | primary
-primary      ::= tarka-value | number | string | identifier | "(" expression ")"
+logical-or      ::= logical-and ("||" logical-and)*
+logical-and     ::= comparison  ("&&" comparison)*
+comparison      ::= additive (compare-op additive)?
+additive        ::= multiplicative (("+" | "-") multiplicative)*
+multiplicative  ::= unary (("*" | "/" | "%") unary)*
+unary           ::= "!" unary | "-" unary | primary
+primary         ::= tarka-value | number | string | call-expr | identifier | "(" expression ")"
+
+# call-expr: name-ref "(" args ")". Qualified calls (namespace.kriya) supported via name-ref.
+call-expr   ::= name-ref "(" arg-list? ")"
+arg-list    ::= expression ("," expression)*
 
 compare-op   ::= "==" | "!=" | "<" | ">" | "<=" | ">="
 tarka-value  ::= "satya" | "asatya" | "avyakta"

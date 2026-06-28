@@ -7,7 +7,8 @@ import { resolveImports, parseRegistryUri, registryCachePath } from '../src/reso
 import { toYaml } from '../src/backends/yaml.js'
 import { toSutraYaml } from '../src/backends/sutra-yaml.js'
 import { toSvg, type Script } from '../src/backends/svg.js'
-import { evaluateGhatana, type Payload } from '../src/evaluator.js'
+import { evaluateGhatana, evaluateKriya, buildKriyaEnv, type Payload } from '../src/evaluator.js'
+import { executeSmriti } from '../src/executor.js'
 
 const VERSION = '0.1.0'
 
@@ -20,6 +21,10 @@ Usage:
   smr compile --svg <file.smr>                 Compile to SVG flow diagram
   smr compile --svg --script devanagari <file> SVG with Devanagari labels
   smr compile --out <path> <file.smr>          Write output to file
+  smr run <file.smr>                           Execute smriti pravah and print outcome
+  smr run <file.smr> --payload <json>          Execute pravah with external payload
+  smr run <file.smr> --kriya <name>            Execute a named kriya and print nirgama
+  smr run <file.smr> --kriya <name> --payload <json>  Execute kriya with aagama payload
   smr trigger <file.smr> --payload <json>      Evaluate ghatana against a payload
   smr fetch <org/name@version>                 Prime local registry cache
   smr fetch <org/name@version> --from <file>   Cache a local file as a registry entry
@@ -27,6 +32,7 @@ Usage:
 Options:
   --help              Show this help
   --version           Show version
+  --kriya <name>      Target kriya name (for smr run)
   --script <script>   Rendering script: latin (default) | devanagari
   --from <file>       Source file for smr fetch
 `.trim()
@@ -45,13 +51,16 @@ const fromIdx    = args.indexOf('--from')
 const fromArg    = fromIdx !== -1 ? args[fromIdx + 1] : null
 const payloadIdx = args.indexOf('--payload')
 const payloadArg = payloadIdx !== -1 ? args[payloadIdx + 1] : null
+const kriyaIdx   = args.indexOf('--kriya')
+const kriyaArg   = kriyaIdx !== -1 ? args[kriyaIdx + 1] : null
 
-const keyValueFlags = new Set(['--out', '--script', '--from', '--payload'])
+const keyValueFlags = new Set(['--out', '--script', '--from', '--payload', '--kriya'])
 const valuePositions = new Set<number>()
 if (outIdx !== -1)     valuePositions.add(outIdx + 1)
 if (scriptIdx !== -1)  valuePositions.add(scriptIdx + 1)
 if (fromIdx !== -1)    valuePositions.add(fromIdx + 1)
 if (payloadIdx !== -1) valuePositions.add(payloadIdx + 1)
+if (kriyaIdx !== -1)   valuePositions.add(kriyaIdx + 1)
 
 const flags = new Set(args.filter((a, i) =>
   a.startsWith('--') && !keyValueFlags.has(a) && !valuePositions.has(i)
@@ -115,6 +124,11 @@ function run() {
     const decl = ast.decls[0]
     if (!decl) { console.error('smr: no declarations found'); process.exit(1) }
 
+    if (decl.kind === 'kriya') {
+      console.error('smr: standalone kriya compile not yet supported — embed in a smriti or sutra')
+      process.exit(1)
+    }
+
     if (decl.kind === 'sutra') {
       if (flags.has('--svg')) {
         console.error('smr: --svg is not supported for sutra files'); process.exit(1)
@@ -138,6 +152,72 @@ function run() {
       output(toYaml(decl))
     }
     return
+  }
+
+  if (command === 'run') {
+    const file = files[0]
+    if (!file) { console.error('Usage: smr run <file.smr> [--kriya <name>] [--payload <json>]'); process.exit(1) }
+    const source = readSource(file)
+    let ast
+    try {
+      const abs = resolve(file)
+      const parsed = parse(source)
+      const context = resolveImports(parsed, abs)
+      ast = typecheck(parsed, context)
+    } catch (e) {
+      console.error(String(e)); process.exit(1)
+    }
+
+    let payload: Payload = {}
+    if (payloadArg) {
+      try { payload = JSON.parse(payloadArg) as Payload }
+      catch { console.error('smr run: --payload must be valid JSON'); process.exit(1) }
+    }
+
+    // ── smr run --kriya <name>: execute a named kriya ──────────────────────────
+    if (kriyaArg) {
+      const env = buildKriyaEnv(ast)
+      const kriya = env.get(kriyaArg)
+      if (!kriya) {
+        console.error(`smr run: kriya '${kriyaArg}' not found in ${file}`)
+        console.error(`  available: ${[...env.keys()].join(', ') || '(none)'}`)
+        process.exit(1)
+      }
+      const argValues = kriya.aagama.map(f => payload[f.name] ?? null)
+      const result = evaluateKriya(kriya, argValues, env)
+      if (kriya.nirgama.length === 0) {
+        console.log('(kriya has no nirgama — ran for side effects)')
+      } else {
+        const out: Record<string, unknown> = {}
+        for (const f of kriya.nirgama) out[f.name] = result[f.name] ?? null
+        console.log(JSON.stringify(out, null, 2))
+      }
+      return
+    }
+
+    // ── smr run <file.smr>: execute the smriti pravah ─────────────────────────
+    const smritiDecl = ast.decls.find(d => d.kind === 'smriti')
+    if (!smritiDecl || smritiDecl.kind !== 'smriti') {
+      console.error('smr run: no smriti declaration found — use --kriya to run a specific kriya')
+      process.exit(1)
+    }
+    const env = buildKriyaEnv(ast)
+    let flowResult
+    try {
+      flowResult = executeSmriti(smritiDecl, payload, env)
+    } catch (e) {
+      console.error(`smr run: ${String(e)}`); process.exit(1)
+    }
+    // Print step log
+    for (const entry of flowResult.log) {
+      const badge = entry.status === 'skipped' ? '[skip]' :
+                    entry.status === 'auto-completed' ? '[auto]' : '[done]'
+      const fields = Object.keys(entry.produced)
+      const summary = fields.length ? ` → ${fields.map(k => `${k}: ${JSON.stringify(entry.produced[k])}`).join(', ')}` : ''
+      console.log(`  ${badge} ${entry.name}${summary}`)
+    }
+    console.log(`\noutcome: ${flowResult.outcome}  (${flowResult.steps} steps)`)
+    process.exit(flowResult.outcome === 'svasti' ? 0 : 1)
   }
 
   if (command === 'trigger') {
@@ -166,7 +246,8 @@ function run() {
       try { payload = JSON.parse(payloadArg) as Payload }
       catch { console.error('smr trigger: --payload must be valid JSON'); process.exit(1) }
     }
-    const result = evaluateGhatana(decl.trigger, payload)
+    const kriyaEnv = buildKriyaEnv(ast)
+    const result = evaluateGhatana(decl.trigger, payload, kriyaEnv)
     if (result.vrtti  !== undefined) console.log(`vrtti:  ${result.vrtti}`)
     if (result.karta  !== undefined) console.log(`karta:  ${JSON.stringify(result.karta)}`)
     if (result.sthala !== undefined) console.log(`sthala: ${JSON.stringify(result.sthala)}`)

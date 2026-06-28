@@ -1,4 +1,5 @@
-import type { Expression } from './ast.js'
+import type { Expression, KriyaDecl, SmritiFile, SthitiBlock } from './ast.js'
+import { nameRefStr } from './ast.js'
 
 // ─── Value types ──────────────────────────────────────────────────────────────
 
@@ -9,9 +10,68 @@ export type TarkaValue = 'satya' | 'asatya' | 'avyakta'
 
 export type Payload = Record<string, EvalValue>
 
+// ─── Kriya environment ────────────────────────────────────────────────────────
+
+// Maps kriya name → declaration. Used by evaluate() to dispatch call expressions.
+// Flat: top-level kriya and all scoped kriya from smriti/sutra share the same namespace
+// for evaluation purposes (scoping enforced by the typechecker, not the evaluator).
+export type KriyaEnv = Map<string, KriyaDecl>
+
+export function buildKriyaEnv(file: SmritiFile): KriyaEnv {
+  const env: KriyaEnv = new Map()
+  for (const decl of file.decls) {
+    if (decl.kind === 'kriya') {
+      env.set(decl.name, decl)
+    } else if (decl.kind === 'smriti' || decl.kind === 'sutra') {
+      for (const k of decl.kriya) env.set(k.name, k)
+    }
+  }
+  return env
+}
+
+// ─── Kriya execution ──────────────────────────────────────────────────────────
+
+// Executes a kriya: binds args to aagama, runs body statements, returns locals.
+// Caller extracts nirgama fields from the returned payload.
+// Evaluates the initial values of a sthiti-block into a Payload.
+// Called once per kriya invocation (kriya-local state) or once at process start (process-scoped).
+export function buildInitialState(block: SthitiBlock, env: KriyaEnv): Payload {
+  const state: Payload = {}
+  for (const f of block.fields) {
+    state[f.name] = f.init ? evaluate(f.init, state, env) : null
+  }
+  return state
+}
+
+export function evaluateKriya(decl: KriyaDecl, args: EvalValue[], env: KriyaEnv): Payload {
+  const locals: Payload = {}
+
+  // Seed sthiti initial state (kriya-local; re-initialised on each call)
+  if (decl.sthitiBlock) {
+    Object.assign(locals, buildInitialState(decl.sthitiBlock, env))
+  }
+
+  // Bind positional args to aagama field names (may overwrite same-named sthiti cells — aagama wins)
+  for (let i = 0; i < decl.aagama.length; i++) {
+    locals[decl.aagama[i].name] = args[i] ?? null
+  }
+
+  // Execute body statements in order
+  for (const stmt of decl.body) {
+    if (stmt.kind === 'assign') {
+      locals[stmt.name] = evaluate(stmt.expr, locals, env)
+    } else {
+      // expr-stmt: evaluate for side effects, discard value
+      evaluate(stmt.expr, locals, env)
+    }
+  }
+
+  return locals
+}
+
 // ─── Evaluator ───────────────────────────────────────────────────────────────
 
-export function evaluate(expr: Expression, payload: Payload): EvalValue {
+export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv): EvalValue {
   switch (expr.kind) {
     case 'number-literal': return expr.value
     case 'string-literal': return expr.value
@@ -24,8 +84,8 @@ export function evaluate(expr: Expression, payload: Payload): EvalValue {
     }
 
     case 'compare': {
-      const l = evaluate(expr.left, payload)
-      const r = evaluate(expr.right, payload)
+      const l = evaluate(expr.left, payload, env)
+      const r = evaluate(expr.right, payload, env)
       if (l === null || r === null) return null
       switch (expr.op) {
         case '==': return l === r
@@ -38,8 +98,8 @@ export function evaluate(expr: Expression, payload: Payload): EvalValue {
     }
 
     case 'logical': {
-      const l = evaluate(expr.left, payload)
-      const r = evaluate(expr.right, payload)
+      const l = evaluate(expr.left, payload, env)
+      const r = evaluate(expr.right, payload, env)
       if (expr.op === '&&') {
         if (l === false || r === false) return false
         if (l === null || r === null) return null
@@ -52,9 +112,41 @@ export function evaluate(expr: Expression, payload: Payload): EvalValue {
     }
 
     case 'not': {
-      const v = evaluate(expr.operand, payload)
+      const v = evaluate(expr.operand, payload, env)
       if (v === null) return null
       return !v
+    }
+
+    case 'negate': {
+      const v = evaluate(expr.operand, payload, env)
+      if (v === null) return null
+      return -(v as number)
+    }
+
+    case 'arith': {
+      const l = evaluate(expr.left, payload, env)
+      const r = evaluate(expr.right, payload, env)
+      if (l === null || r === null) return null
+      switch (expr.op) {
+        case '+': return (l as number) + (r as number)
+        case '-': return (l as number) - (r as number)
+        case '*': return (l as number) * (r as number)
+        case '/': return (r as number) === 0 ? null : (l as number) / (r as number)
+        case '%': return (r as number) === 0 ? null : (l as number) % (r as number)
+      }
+    }
+
+    case 'call': {
+      if (!env) return null   // no env — avyakta (caller did not provide kriya context)
+      const name = nameRefStr(expr.callee)
+      const kriya = env.get(name)
+      if (!kriya) return null  // unknown kriya — avyakta
+      const args = expr.args.map(a => evaluate(a, payload, env))
+      const result = evaluateKriya(kriya, args, env)
+      // Single nirgama: return its value directly (the common case).
+      // Multiple nirgama: return first. Full multi-return belongs with the process executor (Layer 4).
+      if (kriya.nirgama.length >= 1) return result[kriya.nirgama[0].name] ?? null
+      return null
     }
   }
 }
@@ -80,11 +172,11 @@ export interface GhatanaResult {
 
 import type { GhatanaDecl } from './ast.js'
 
-export function evaluateGhatana(ghatana: GhatanaDecl, payload: Payload): GhatanaResult {
-  const vrtti  = ghatana.vrtti  ? toTarka(evaluate(ghatana.vrtti,  payload)) : undefined
-  const karta  = ghatana.karta  ? evaluate(ghatana.karta,  payload) : undefined
-  const sthala = ghatana.sthala ? evaluate(ghatana.sthala, payload) : undefined
-  const kaarya = ghatana.kaarya ? evaluate(ghatana.kaarya, payload) : undefined
+export function evaluateGhatana(ghatana: GhatanaDecl, payload: Payload, env?: KriyaEnv): GhatanaResult {
+  const vrtti  = ghatana.vrtti  ? toTarka(evaluate(ghatana.vrtti,  payload, env)) : undefined
+  const karta  = ghatana.karta  ? evaluate(ghatana.karta,  payload, env) : undefined
+  const sthala = ghatana.sthala ? evaluate(ghatana.sthala, payload, env) : undefined
+  const kaarya = ghatana.kaarya ? evaluate(ghatana.kaarya, payload, env) : undefined
 
   // fires when vrtti is satya, or when no vrtti is declared (unconditional)
   const fires = vrtti === undefined || vrtti === 'satya'
