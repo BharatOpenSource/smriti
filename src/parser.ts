@@ -16,6 +16,7 @@ import type {
   KriyaDecl, SparshaDecl, SparshaField, EffectChannel, EffectMode,
   KriyaStmt, AssignStmt, ExprStmt,
   SthitiBlock, SthitiField,
+  SevaDecl,
 } from './ast.js'
 
 export class ParseError extends Error {
@@ -77,14 +78,15 @@ class Parser {
 
   parseFile(): SmritiFile {
     const pos = this.pos()
-    const decls: (SmritiDecl | SutraDecl | KriyaDecl)[] = []
+    const decls: (SmritiDecl | SutraDecl | KriyaDecl | SevaDecl)[] = []
     while (!this.check(TokenKind.EOF)) {
       if (this.check(TokenKind.SMRITI))      decls.push(this.parseSmriti())
       else if (this.check(TokenKind.SUTRA))  decls.push(this.parseSutra())
       else if (this.check(TokenKind.KRIYA))  decls.push(this.parseKriya())
+      else if (this.check(TokenKind.SEVA))   decls.push(this.parseSeva())
       else {
         const t = this.peek()
-        throw new ParseError(`Expected 'smriti', 'sutra', or 'kriya', got '${t.value}'`, t.pos)
+        throw new ParseError(`Expected 'smriti', 'sutra', 'kriya', or 'seva', got '${t.value}'`, t.pos)
       }
     }
     return { kind: 'file', decls, pos }
@@ -830,6 +832,52 @@ class Parser {
       while (this.tryEat(TokenKind.COMMA)) args.push(this.parseExpression())
     }
     return args
+  }
+
+  // ─── seva ─────────────────────────────────────────────────────────────────
+  // seva endpoint-name "Display Name" {
+  //   method: POST
+  //   path:   "/filings/{id}"
+  //   aagama: field (type), ...
+  //   nirgama: field (type), ...
+  // }
+  private parseSeva(): SevaDecl {
+    const pos = this.pos()
+    this.eat(TokenKind.SEVA)
+    const name = this.eat(TokenKind.IDENTIFIER, 'seva declaration').value
+    const itiName = this.check(TokenKind.STRING) ? this.advance().value : undefined
+    this.eat(TokenKind.LBRACE, `seva '${name}'`)
+
+    let method = ''
+    let path = ''
+    let aagama: TypedField[] = []
+    let nirgama: TypedField[] = []
+
+    while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
+      const tok = this.peek()
+      if (tok.kind === TokenKind.IDENTIFIER && tok.value === 'method') {
+        this.advance()
+        this.eat(TokenKind.COLON)
+        method = this.eat(TokenKind.IDENTIFIER, `seva '${name}' method`).value.toUpperCase()
+      } else if (tok.kind === TokenKind.IDENTIFIER && tok.value === 'path') {
+        this.advance()
+        this.eat(TokenKind.COLON)
+        path = this.eat(TokenKind.STRING, `seva '${name}' path`).value
+      } else if (tok.kind === TokenKind.AAGAMA) {
+        this.advance()
+        this.eat(TokenKind.COLON)
+        aagama = this.parseTypedFields()
+      } else if (tok.kind === TokenKind.NIRGAMA) {
+        this.advance()
+        this.eat(TokenKind.COLON)
+        nirgama = this.parseTypedFields()
+      } else {
+        this.advance()
+      }
+    }
+
+    this.eat(TokenKind.RBRACE, `seva '${name}'`)
+    return { kind: 'seva', name, itiName, method, path, aagama, nirgama, pos }
   }
 }
 

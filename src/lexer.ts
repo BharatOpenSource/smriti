@@ -28,6 +28,9 @@ export const enum TokenKind {
   // Computation keywords
   KRIYA = 'kriya', SPARSHA = 'sparsha',
 
+  // Service declaration keyword
+  SEVA = 'seva',
+
   // Data keywords
   VARNA = 'varna', STHITI = 'sthiti',
 
@@ -116,6 +119,7 @@ const KEYWORDS: Record<string, TokenKind> = {
   avyakta: TokenKind.AVYAKTA,     public: TokenKind.PUBLIC,
   restricted: TokenKind.RESTRICTED, private: TokenKind.PRIVATE,
   iti: TokenKind.ITI,
+  seva: TokenKind.SEVA,
 }
 
 const PUNCTUATION: Record<string, TokenKind> = {

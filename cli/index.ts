@@ -7,6 +7,7 @@ import { resolveImports, parseRegistryUri, registryCachePath } from '../src/reso
 import { toYaml } from '../src/backends/yaml.js'
 import { toSutraYaml } from '../src/backends/sutra-yaml.js'
 import { toSvg, type Script } from '../src/backends/svg.js'
+import { toOpenApi } from '../src/backends/openapi.js'
 import { evaluateGhatana, evaluateKriya, buildKriyaEnv, type Payload } from '../src/evaluator.js'
 import { executeSmriti } from '../src/executor.js'
 import { buildRegistry } from '../src/registry.js'
@@ -19,6 +20,7 @@ smr — Smriti language toolchain v${VERSION}
 Usage:
   smr check <file.smr>                         Parse and type-check only
   smr compile <file.smr>                       Compile to YAML (default)
+  smr compile --openapi <file.smr>             Emit OpenAPI 3.1 JSON from seva blocks
   smr compile --svg <file.smr>                 Compile to SVG flow diagram
   smr compile --svg --script devanagari <file> SVG with Devanagari labels
   smr compile --out <path> <file.smr>          Write output to file
@@ -125,6 +127,25 @@ function run() {
     const decl = ast.decls[0]
     if (!decl) { console.error('smr: no declarations found'); process.exit(1) }
 
+    if (flags.has('--openapi')) {
+      const sevaDecls = ast.decls.filter(d => d.kind === 'seva')
+      if (sevaDecls.length === 0) {
+        console.error('smr compile --openapi: no seva declarations found in file')
+        process.exit(1)
+      }
+      const title = ast.decls.find(d => d.kind === 'smriti')
+        ? (ast.decls.find(d => d.kind === 'smriti') as { itiName?: string; name: string }).itiName
+          ?? (ast.decls.find(d => d.kind === 'smriti') as { name: string }).name
+        : 'Smriti API'
+      output(toOpenApi(ast, title))
+      return
+    }
+
+    if (decl.kind === 'seva') {
+      console.error('smr compile: use --openapi to compile seva declarations')
+      process.exit(1)
+    }
+
     if (decl.kind === 'kriya') {
       console.error('smr: standalone kriya compile not yet supported — embed in a smriti or sutra')
       process.exit(1)
@@ -138,19 +159,21 @@ function run() {
       return
     }
 
-    if (flags.has('--svg')) {
-      const script: Script = scriptArg === 'devanagari' ? 'devanagari' : 'latin'
-      if (scriptArg && script === 'latin' && scriptArg !== 'latin') {
-        console.error(`smr: unknown script '${scriptArg}' — use 'latin' or 'devanagari'`)
-        process.exit(1)
+    if (decl.kind === 'smriti') {
+      if (flags.has('--svg')) {
+        const script: Script = scriptArg === 'devanagari' ? 'devanagari' : 'latin'
+        if (scriptArg && script === 'latin' && scriptArg !== 'latin') {
+          console.error(`smr: unknown script '${scriptArg}' — use 'latin' or 'devanagari'`)
+          process.exit(1)
+        }
+        output(toSvg(decl, { script }))
+      } else {
+        if (!decl.flow) {
+          console.error('smr: this smriti has no pravah — YAML output requires a flow. Use --svg for a declaration diagram.')
+          process.exit(1)
+        }
+        output(toYaml(decl))
       }
-      output(toSvg(decl, { script }))
-    } else {
-      if (!decl.flow) {
-        console.error('smr: this smriti has no pravah — YAML output requires a flow. Use --svg for a declaration diagram.')
-        process.exit(1)
-      }
-      output(toYaml(decl))
     }
     return
   }

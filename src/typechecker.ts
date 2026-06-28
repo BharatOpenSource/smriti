@@ -5,6 +5,7 @@ import type {
   Expression, GhatanaDecl,
   KriyaDecl, SparshaDecl,
   SthitiBlock,
+  SevaDecl,
 } from './ast.js'
 import { nameRefStr } from './ast.js'
 import type { ResolveContext } from './resolver.js'
@@ -60,6 +61,7 @@ class Checker {
       if (decl.kind === 'smriti')      this.checkSmriti(decl, impureKriya)
       else if (decl.kind === 'sutra')  this.checkSutra(decl, impureKriya)
       else if (decl.kind === 'kriya')  this.checkKriya(decl, impureKriya)
+      else if (decl.kind === 'seva')   this.checkSeva(decl)
     }
   }
 
@@ -698,6 +700,22 @@ class Checker {
         this.fail(`kosa key type must be a scalar, not a collection`, pos)
       }
     }
+  }
+
+  private checkSeva(decl: SevaDecl) {
+    const validMethods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+    if (!decl.method) {
+      this.fail(`seva '${decl.name}': method is required — use GET, POST, PUT, PATCH, or DELETE`, decl.pos)
+    } else if (!validMethods.has(decl.method)) {
+      this.fail(`seva '${decl.name}': invalid method '${decl.method}' — use GET, POST, PUT, PATCH, or DELETE`, decl.pos)
+    }
+    if (!decl.path) {
+      this.fail(`seva '${decl.name}': path is required`, decl.pos)
+    } else if (!decl.path.startsWith('/')) {
+      this.fail(`seva '${decl.name}': path must start with '/' (got '${decl.path}')`, decl.pos)
+    }
+    for (const f of decl.aagama) this.checkType(f.type, f.pos)
+    for (const f of decl.nirgama) this.checkType(f.type, f.pos)
   }
 }
 

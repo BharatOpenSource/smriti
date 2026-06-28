@@ -27,7 +27,7 @@ export interface Node {
 
 export interface SmritiFile extends Node {
   kind: 'file'
-  decls: (SmritiDecl | SutraDecl | KriyaDecl)[]
+  decls: (SmritiDecl | SutraDecl | KriyaDecl | SevaDecl)[]
 }
 
 export interface SmritiDecl extends Node {
@@ -297,6 +297,20 @@ export interface AssignStmt extends Node {
 export interface ExprStmt extends Node {
   kind: 'expr-stmt'
   expr: Expression
+}
+
+// ─── Seva (service endpoint declaration) ─────────────────────────────────────
+
+// seva declares a named HTTP endpoint. Layer 5 compiles this to OpenAPI 3.1.
+// No runtime: `smr compile --openapi` emits the spec; execution is out of scope.
+export interface SevaDecl extends Node {
+  kind: 'seva'
+  name: string
+  itiName?: string
+  method: string        // GET POST PUT PATCH DELETE (uppercased by parser)
+  path: string          // URL path, e.g. "/filings/{id}"
+  aagama: TypedField[]  // request fields (body for POST/PUT/PATCH, query for GET/DELETE, path for {params})
+  nirgama: TypedField[] // response body fields
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
