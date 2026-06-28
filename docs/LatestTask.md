@@ -53,7 +53,8 @@ krama/kosa constraints, grammar v0.3, tree-sitter regenerated, sutra YAML backen
 
 ## Open items
 
-- [ ] Layer 6 — TBD (discuss with Srikar: `seva` services, `sangraha` persistence, LSP, pravaaha integration)
-- [ ] `smr fetch` HTTP (blocked on pravaaha)
-- [ ] Extract `tree-sitter-smriti/` to standalone repo for nvim/Linguist
-- [ ] Tree-sitter grammar needs update to v0.4+ (kriya/sthiti/sparsha — grammar.js updated but highlights may drift)
+- [ ] **Layer 5 — seva (OpenAPI emit)**: `seva` block in language; `smr compile --openapi <file.smr>`; `src/backends/openapi.ts`; no runtime, no new deps
+- [ ] **`smr fetch` HTTP**: blocked — needs live pravaaha registry endpoint; HttpAdapter ready (Layer 3)
+- [ ] **tree-sitter standalone**: separate session — move `tree-sitter-smriti/` to own BharatOpenSource repo, wire nvim-treesitter, Linguist
+- [ ] Cross-step error data validation — handler `aagama` vs source `apavaada:` not yet enforced
+- [ ] Runtime scheduling — `hetu prati N unit` declared, not executed

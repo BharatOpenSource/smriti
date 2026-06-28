@@ -131,26 +131,39 @@ kriya fetch-gstin-status {
 }
 ```
 
-### Smriti capability expansion — decided 2026-06-28
+### Smriti capability expansion — decided 2026-06-28, updated 2026-06-28
 
-Smriti's ambition is wider than process description. The language will grow to become self-sufficient — capable of building platforms like pravaaha end-to-end. Seven capability layers identified, to be built in sequence:
+Seven capability layers. Layers 1–4 complete (426 tests). Layer 5 (seva) is next.
 
 | Layer | Capability | Key concept | Status |
 |-------|-----------|-------------|--------|
-| 1 | Full computation + functions | `kriya` | Next |
-| 2 | Mutable state | `sthiti` (already in vocabulary) | Follows L1 |
-| 3 | I/O and effects | effect system, HTTP, file | Follows L2 |
-| 4 | Runtime / executor | `smr run` | Follows L3 |
-| 5 | API / service layer | `seva` (proposed) | Follows L4 |
-| 6 | Persistence | `sangraha` (proposed) | Follows L5 |
-| 7 | UI / component model | `darshana` (proposed) | Far |
-
-New vocabulary proposed (not yet locked — to be decided before implementation):
-- `seva` (सेवा) — named HTTP endpoint / service declaration
-- `sangraha` (संग्रह) — persistent typed store (key-value, document, or relational backend)
-- `darshana` (दर्शन) — UI component / view (declarative layout + data binding)
+| 1 | Full computation + functions | `kriya` | ✓ done |
+| 2 | Mutable state | `sthiti` | ✓ done |
+| 3 | I/O and effects | effect system, sparsha | ✓ done |
+| 4 | Runtime / executor + aavaha | `smr run`, registry | ✓ done |
+| 5 | API / service layer | `seva` | Next |
+| 6 | Persistence | `sangraha` | Follows L5 |
+| 7 | UI / component model | `darshana` | Far |
 
 Full roadmap with sequencing: see `docs/roadmap.md`.
+
+### Layer numbering — decided 2026-06-28
+
+Registry + aavaha dispatch (our "Layer 5" in implementation) is an extension of the executor (Layer 4), not a standalone roadmap layer. The roadmap layer table above reflects the canonical numbering. `seva` = Layer 5.
+
+### seva scope — decided 2026-06-28
+
+**No HTTP server runtime. No new npm dependencies.**
+`seva` is a compile-to-spec layer only: `smr compile --openapi <file.smr>` emits OpenAPI 3.1 JSON.
+Language: `seva` block with method, path, typed aagama (request) + nirgama (response), bound to a `smriti` or `kriya`. Backend: `src/backends/openapi.ts`.
+
+### smr fetch — decision 2026-06-28
+
+Stays blocked. Needs a live pravaaha registry HTTP endpoint. `HttpAdapter` is defined (Layer 3). Will implement when pravaaha ships the endpoint.
+
+### tree-sitter standalone — decision 2026-06-28
+
+Separate session task (not a capability layer). Move `tree-sitter-smriti/` to its own BharatOpenSource repo, wire to nvim-treesitter, register with GitHub Linguist.
 
 ## Open Questions / Tasks
 
