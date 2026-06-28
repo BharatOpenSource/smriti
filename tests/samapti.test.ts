@@ -118,6 +118,106 @@ describe('samapti — yaml backend', () => {
   })
 })
 
+// ─── Cross-step aagama coverage ──────────────────────────────────────────────
+
+describe('samapti — handler coverage', () => {
+  it('accepts handler that declares all samaptiNirgama fields', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada verify {
+            samaya: 14 antara
+            samapti: elapsed (antara), sla-target (vakya)
+            samapti → escalate
+          }
+          pada escalate {
+            aagama: elapsed (antara), sla-target (vakya)
+            kaarya: "Escalate"
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).not.toThrow()
+  })
+
+  it('rejects handler missing a declared samapti field', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada verify {
+            samaya: 14 antara
+            samapti: elapsed (antara), sla-target (vakya)
+            samapti → escalate
+          }
+          pada escalate {
+            aagama: elapsed (antara)
+            kaarya: "Escalate"
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).toThrow(/does not declare field 'sla-target'/)
+  })
+
+  it('rejects handler with type mismatch on samapti field', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada verify {
+            samaya: 7 antara
+            samapti: duration (sankhya)
+            samapti → on-timeout
+          }
+          pada on-timeout {
+            aagama: duration (vakya)
+            kaarya: "Handle timeout"
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).toThrow(/declares 'duration' as vakya but 'verify' samapti produces it as sankhya/)
+  })
+
+  it('skips coverage check when samapti routes to terminal', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada verify {
+            samaya: 7 antara
+            samapti: elapsed (antara)
+            samapti → anaapta
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).not.toThrow()
+  })
+
+  it('validates both apavaada and samapti coverage on the same step', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada process {
+            samaya: 7 antara
+            apavaada: err-code (vakya)
+            apavaada → on-error
+            samapti: elapsed (antara)
+            samapti → on-timeout
+          }
+          pada on-error   { aagama: err-code (vakya)  kaarya: "Handle error"   }
+          pada on-timeout { aagama: elapsed (antara)  kaarya: "Handle timeout" }
+          svasti
+          anaapta
+        }
+      }
+    `)).not.toThrow()
+  })
+})
+
 // ─── SVG backend ─────────────────────────────────────────────────────────────
 
 describe('samapti — svg backend', () => {

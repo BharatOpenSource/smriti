@@ -125,6 +125,120 @@ describe('apavaada — yaml backend', () => {
   })
 })
 
+// ─── Cross-step aagama coverage ──────────────────────────────────────────────
+
+describe('apavaada — handler coverage', () => {
+  it('accepts handler that declares all apavaadaNirgama fields', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada submit {
+            apavaada: error-code (vakya), reason (vakya)
+            apavaada → handle-error
+          }
+          pada handle-error {
+            aagama: error-code (vakya), reason (vakya)
+            kaarya: "Handle error"
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).not.toThrow()
+  })
+
+  it('rejects handler missing a declared apavaada field', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada submit {
+            apavaada: error-code (vakya), reason (vakya)
+            apavaada → handle-error
+          }
+          pada handle-error {
+            aagama: error-code (vakya)
+            kaarya: "Handle error"
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).toThrow(/does not declare field 'reason'/)
+  })
+
+  it('rejects handler with type mismatch on apavaada field', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada submit {
+            apavaada: error-code (sankhya)
+            apavaada → handle-error
+          }
+          pada handle-error {
+            aagama: error-code (vakya)
+            kaarya: "Handle error"
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).toThrow(/declares 'error-code' as vakya but 'submit' apavaada produces it as sankhya/)
+  })
+
+  it('allows handler with more aagama than produced — no missing field error', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada submit {
+            apavaada: error-code (vakya)
+            apavaada → handle-error
+          }
+          pada handle-error {
+            aagama: error-code (vakya), extra (vakya)
+            kaarya: "Handle error"
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).not.toThrow()
+  })
+
+  it('skips coverage check when apavaada routes to a terminal', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada submit {
+            apavaada: error-code (vakya)
+            apavaada → anaapta
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).not.toThrow()
+  })
+
+  it('handles multiple apavaada fields — all must be covered', () => {
+    expect(() => check(`
+      smriti t {
+        pravah {
+          pada submit {
+            apavaada: code (vakya), msg (vakya), retryable (tarka)
+            apavaada → on-error
+          }
+          pada on-error {
+            aagama: code (vakya), msg (vakya)
+            kaarya: "Handle"
+          }
+          svasti
+          anaapta
+        }
+      }
+    `)).toThrow(/does not declare field 'retryable'/)
+  })
+})
+
 // ─── SVG backend ─────────────────────────────────────────────────────────────
 
 describe('apavaada — svg backend', () => {

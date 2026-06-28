@@ -132,7 +132,7 @@ class Checker {
     for (const k of decl.kriya) this.checkKriya(k, impureKriya)
     if (decl.sthitiBlock) this.checkSthitiBlock(decl.sthitiBlock)
     for (const item of decl.flow.items) {
-      if (item.kind === 'aadesha') this.checkPada(item.pada, new Set(), new Set())
+      if (item.kind === 'aadesha') this.checkPada(item.pada, new Set(), new Set(), new Map())
     }
     this.checkFlow(decl.flow, new Set(), externalInputs)
   }
@@ -257,10 +257,11 @@ class Checker {
   // Data flow is handled by the outer checkDataFlow with full outer context.
   private checkFlow(flow: FlowDecl, participants: Set<string>, externalInputs?: Map<string, SmritiType>, isParallelTrack = false) {
     const stepNames = this.collectStepNames(flow)
+    const stepByName = this.collectStepByName(flow)
     this.checkStepUniqueness(flow)
 
     for (const item of flow.items) {
-      this.checkFlowItem(item, stepNames, participants)
+      this.checkFlowItem(item, stepNames, participants, stepByName)
     }
 
     if (!isParallelTrack) {
@@ -374,6 +375,21 @@ class Checker {
     return names
   }
 
+  // Maps step name → PadaDecl for cross-step aagama coverage checks.
+  private collectStepByName(flow: FlowDecl): Map<string, PadaDecl> {
+    const map = new Map<string, PadaDecl>()
+    const collect = (items: FlowItem[]) => {
+      for (const item of items) {
+        if (item.kind === 'pada') map.set(item.name, item)
+        if (item.kind === 'anubhaga') {
+          for (const track of item.tracks) collect(track)
+        }
+      }
+    }
+    collect(flow.items)
+    return map
+  }
+
   private checkStepUniqueness(flow: FlowDecl) {
     const seen = new Map<string, Pos>()
     for (const item of flow.items) {
@@ -389,10 +405,10 @@ class Checker {
     }
   }
 
-  private checkFlowItem(item: FlowItem, stepNames: Set<string>, participants: Set<string>) {
+  private checkFlowItem(item: FlowItem, stepNames: Set<string>, participants: Set<string>, stepByName: Map<string, PadaDecl>) {
     switch (item.kind) {
-      case 'pada':     return this.checkPada(item, stepNames, participants)
-      case 'aadesha':  return this.checkPada(item.pada, stepNames, participants)
+      case 'pada':     return this.checkPada(item, stepNames, participants, stepByName)
+      case 'aadesha':  return this.checkPada(item.pada, stepNames, participants, stepByName)
       case 'varna':    return this.checkVarna(item)
       case 'vibhaga':  return this.checkVibhaga(item, stepNames)
       case 'anubhaga': {
@@ -440,7 +456,7 @@ class Checker {
 
   // ─── Step ──────────────────────────────────────────────────────────────────
 
-  private checkPada(pada: PadaDecl, stepNames: Set<string>, participants: Set<string>) {
+  private checkPada(pada: PadaDecl, stepNames: Set<string>, participants: Set<string>, stepByName: Map<string, PadaDecl>) {
     this.checkIti(pada.name, pada.itiName, pada.pos)
 
     if (pada.karta !== undefined) {
@@ -515,18 +531,57 @@ class Checker {
     if (pada.aagama) this.checkTypedFields(pada.aagama)
     if (pada.nirgama) this.checkTypedFields(pada.nirgama)
 
-    // Error/timeout data fields — validate that they're well-typed
+    // Error/timeout data fields — validate that they're well-typed, then check handler coverage
     if (pada.apavaadaNirgama) {
       if (!pada.apavaada) {
         this.fail(`apavaada data declared on '${pada.name}' but no apavaada routing — add: apavaada → handler`, pada.pos)
       }
       this.checkTypedFields(pada.apavaadaNirgama)
+      if (pada.apavaada) {
+        this.checkHandlerCoverage(pada.name, 'apavaada', pada.apavaada, pada.apavaadaNirgama, stepByName, pada.pos)
+      }
     }
     if (pada.samaptiNirgama) {
       if (!pada.samapti) {
         this.fail(`samapti data declared on '${pada.name}' but no samapti routing — add: samapti → handler`, pada.pos)
       }
       this.checkTypedFields(pada.samaptiNirgama)
+      if (pada.samapti) {
+        this.checkHandlerCoverage(pada.name, 'samapti', pada.samapti, pada.samaptiNirgama, stepByName, pada.pos)
+      }
+    }
+  }
+
+  // Validates that a handler step's aagama covers all fields produced by the source step's
+  // apavaada/samapti nirgama. Skips terminals (svasti/anaapta) and unknown steps (caught elsewhere).
+  private checkHandlerCoverage(
+    sourceName: string,
+    routeKind: 'apavaada' | 'samapti',
+    handlerName: string,
+    producedFields: TypedField[],
+    stepByName: Map<string, PadaDecl>,
+    pos: Pos,
+  ) {
+    if (handlerName === 'svasti' || handlerName === 'anaapta') return
+    const handler = stepByName.get(handlerName)
+    if (!handler) return  // non-existent target already caught by the target-exists check
+
+    const handlerAagama = handler.aagama ?? []
+    for (const produced of producedFields) {
+      const declared = handlerAagama.find(f => f.name === produced.name)
+      if (!declared) {
+        this.fail(
+          `handler '${handlerName}' receives ${routeKind} from '${sourceName}' ` +
+          `but does not declare field '${produced.name}' in its aagama`,
+          pos,
+        )
+      } else if (!this.typesMatch(declared.type, produced.type)) {
+        this.fail(
+          `handler '${handlerName}' declares '${produced.name}' as ${typeStr(declared.type)} ` +
+          `but '${sourceName}' ${routeKind} produces it as ${typeStr(produced.type)}`,
+          pos,
+        )
+      }
     }
   }
 
