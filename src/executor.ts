@@ -1,6 +1,7 @@
 import type { FlowItem, FlowDecl, PadaDecl, SmritiDecl } from './ast.js'
 import { nameRefStr } from './ast.js'
 import { evaluate, evaluateKriya, buildInitialState, type KriyaEnv, type Payload } from './evaluator.js'
+import type { Registry } from './registry.js'
 
 // ─── Result types ─────────────────────────────────────────────────────────────
 
@@ -19,24 +20,40 @@ export interface FlowResult {
 
 // ─── Entry points ─────────────────────────────────────────────────────────────
 
-export function executeSmriti(decl: SmritiDecl, initial: Payload, env: KriyaEnv): FlowResult {
+export function executeSmriti(
+  decl: SmritiDecl,
+  initial: Payload,
+  env: KriyaEnv,
+  registry?: Registry,
+  budget?: number[],
+): FlowResult {
   if (!decl.flow) throw new Error(`smriti '${decl.name}' has no pravah`)
-  // Process-scoped sthiti initialised once at process start
   const seed: Payload = decl.sthitiBlock ? buildInitialState(decl.sthitiBlock, env) : {}
   const produced: Payload = { ...seed, ...initial }
-  const budget = [10_000]
-  return runFlow(decl.flow.items, produced, env, budget)
+  const b = budget ?? [10_000]
+  return runFlow(decl.flow.items, produced, env, b, registry)
 }
 
-export function executeFlow(flow: FlowDecl, initial: Payload, env: KriyaEnv, maxSteps = 10_000): FlowResult {
+export function executeFlow(
+  flow: FlowDecl,
+  initial: Payload,
+  env: KriyaEnv,
+  maxSteps = 10_000,
+  registry?: Registry,
+): FlowResult {
   const budget = [maxSteps]
-  return runFlow(flow.items, { ...initial }, env, budget)
+  return runFlow(flow.items, { ...initial }, env, budget, registry)
 }
 
 // ─── Core executor ────────────────────────────────────────────────────────────
 
-// budget is a single-element array so it threads by reference through recursive track calls.
-function runFlow(items: FlowItem[], produced: Payload, env: KriyaEnv, budget: number[]): FlowResult {
+function runFlow(
+  items: FlowItem[],
+  produced: Payload,
+  env: KriyaEnv,
+  budget: number[],
+  registry?: Registry,
+): FlowResult {
   const log: StepLog[] = []
   const stepIndex = buildStepIndex(items)
   let cursor = 0
@@ -105,9 +122,7 @@ function runFlow(items: FlowItem[], produced: Payload, env: KriyaEnv, budget: nu
 
       case 'anubhaga': {
         for (const track of item.tracks) {
-          // Each track starts with a copy of produced-so-far
-          const trackResult = runFlow(track, { ...produced }, env, budget)
-          // Merge track outputs into main produced (last track wins on collision)
+          const trackResult = runFlow(track, { ...produced }, env, budget, registry)
           Object.assign(produced, trackResult.produced)
           log.push(...trackResult.log)
           if (trackResult.outcome === 'anaapta') {
@@ -119,18 +134,38 @@ function runFlow(items: FlowItem[], produced: Payload, env: KriyaEnv, budget: nu
       }
 
       case 'anugama':
-        // Join point — all named tracks already completed inside their anubhaga above
         cursor++
         break
 
-      case 'aavaha':
-        // Sub-process invocation — deferred to Layer 5 (process registry)
-        log.push({ name: nameRefStr(item.target), status: 'skipped', produced: {} })
+      case 'aavaha': {
+        const targetName = nameRefStr(item.target)
+        const sub = registry?.get(targetName)
+        if (!sub) {
+          log.push({ name: targetName, status: 'skipped', produced: {} })
+        } else {
+          // Build sub-process aagama from current produced (matched by name)
+          const subPayload: Payload = {}
+          for (const f of item.aagama) subPayload[f.name] = produced[f.name] ?? null
+          const subResult = executeSmriti(sub as SmritiDecl, subPayload, env, registry, budget)
+          // Bind declared nirgama from sub-process back into parent produced
+          const subOut: Payload = {}
+          for (const f of item.nirgama) {
+            subOut[f.name] = subResult.produced[f.name] ?? null
+            produced[f.name] = subOut[f.name]
+          }
+          log.push({ name: targetName, status: subResult.outcome === 'svasti' ? 'completed' : 'skipped', produced: subOut })
+          // Sub-process anaapta propagates to parent
+          if (subResult.outcome === 'anaapta') {
+            log.push(...subResult.log)
+            return { outcome: 'anaapta', produced, log, steps: 10_000 - budget[0] }
+          }
+          log.push(...subResult.log)
+        }
         cursor++
         break
+      }
 
       case 'sthiti':
-        // State checkpoint marker only — no execution needed
         cursor++
         break
 
@@ -150,7 +185,6 @@ function executePada(
   env: KriyaEnv,
   stepIndex: Map<string, number>,
 ): { skipped: boolean; outputs: Payload; jump?: number } {
-  // Guard evaluation: false or null → skip
   if (pada.khanda) {
     const guard = evaluate(pada.khanda, ctx, env)
     if (guard === false || guard === null) return { skipped: true, outputs: {} }
@@ -158,9 +192,7 @@ function executePada(
 
   const outputs: Payload = {}
 
-  // kaarya: kriya invocation — automated step.
-  // Positional mapping: pada.nirgama[i] receives the value of kriya.nirgama[i].
-  // This lets steps rename outputs while still using a generic kriya internally.
+  // kaarya: kriya invocation — positional mapping: pada.nirgama[i] ← kriya.nirgama[i]
   if (pada.kaarya && typeof pada.kaarya === 'object' && pada.kaarya.kind === 'call') {
     const callee = nameRefStr(pada.kaarya.callee)
     const kriya = env.get(callee)
@@ -180,11 +212,9 @@ function executePada(
   }
   if (autoCompleted) outputs.__autoCompleted = true
 
-  // Routing: pravritti (forward) or prativritti (loop back)
   let jump: number | undefined
   if (pada.routing) {
-    const target = pada.routing.target
-    const idx = stepIndex.get(target)
+    const idx = stepIndex.get(pada.routing.target)
     if (idx !== undefined) jump = idx
   }
 

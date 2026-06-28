@@ -9,6 +9,7 @@ import { toSutraYaml } from '../src/backends/sutra-yaml.js'
 import { toSvg, type Script } from '../src/backends/svg.js'
 import { evaluateGhatana, evaluateKriya, buildKriyaEnv, type Payload } from '../src/evaluator.js'
 import { executeSmriti } from '../src/executor.js'
+import { buildRegistry } from '../src/registry.js'
 
 const VERSION = '0.1.0'
 
@@ -196,15 +197,18 @@ function run() {
     }
 
     // ── smr run <file.smr>: execute the smriti pravah ─────────────────────────
-    const smritiDecl = ast.decls.find(d => d.kind === 'smriti')
+    // Use the LAST smriti in the file — helpers/sub-processes are declared first, root process last.
+    const smritiDecls = ast.decls.filter(d => d.kind === 'smriti')
+    const smritiDecl = smritiDecls[smritiDecls.length - 1]
     if (!smritiDecl || smritiDecl.kind !== 'smriti') {
       console.error('smr run: no smriti declaration found — use --kriya to run a specific kriya')
       process.exit(1)
     }
     const env = buildKriyaEnv(ast)
+    const registry = buildRegistry(ast)
     let flowResult
     try {
-      flowResult = executeSmriti(smritiDecl, payload, env)
+      flowResult = executeSmriti(smritiDecl, payload, env, registry)
     } catch (e) {
       console.error(`smr run: ${String(e)}`); process.exit(1)
     }

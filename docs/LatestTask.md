@@ -102,3 +102,10 @@
 - [x] CLI: `smr run <file.smr> [--payload <json>]` executes smriti pravah, prints step log + outcome
 - [x] Tests: `tests/executor.test.ts` (28 tests) — linear, guards, kaarya, varna, vibhaga, routing, parallel, sthiti, budget (411 total, 21 files)
 - [x] Smoke test: gst-filing smriti with guard → varna → kriya dispatch → vibhaga → svasti
+
+**Layer 5 — Process Registry + aavaha Dispatch complete:**
+- [x] `src/registry.ts` — `Registry` interface, `buildRegistry(file)`: maps all smriti/sutra decls by name; `register()` for runtime additions
+- [x] `src/executor.ts` — aavaha case: looks up target in registry, builds sub-process aagama from produced, runs sub-process with shared budget, writes nirgama back to parent produced, propagates child log and anaapta outcome; recursive aavaha protected by shared budget
+- [x] `cli/index.ts` — wired `buildRegistry`; CLI picks LAST smriti in file as root process (helpers declared first); `smr run` passes registry to `executeSmriti`
+- [x] Tests — `tests/registry.test.ts` (15 tests): buildRegistry, aavaha stub, sub-process invocation, aagama/nirgama pass-through, child log, anaapta propagation, unknown target, nested, recursive budget guard, sutra dispatch (426 total, 22 files)
+- [x] Smoke test: loan-application smriti with aavaha kyc-verification sub-process → full step log showing parent + child steps (7 steps, svasti)
