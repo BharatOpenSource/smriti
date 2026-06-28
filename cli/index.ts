@@ -8,6 +8,7 @@ import { toYaml } from '../src/backends/yaml.js'
 import { toSutraYaml } from '../src/backends/sutra-yaml.js'
 import { toSvg, type Script } from '../src/backends/svg.js'
 import { toOpenApi } from '../src/backends/openapi.js'
+import { toSchema } from '../src/backends/schema.js'
 import { computeIntervalMs } from '../src/scheduler.js'
 import { evaluateGhatana, evaluateKriya, buildKriyaEnv, type Payload } from '../src/evaluator.js'
 import { executeSmriti } from '../src/executor.js'
@@ -22,6 +23,7 @@ Usage:
   smr check <file.smr>                         Parse and type-check only
   smr compile <file.smr>                       Compile to YAML (default)
   smr compile --openapi <file.smr>             Emit OpenAPI 3.1 JSON from seva blocks
+  smr compile --schema <file.smr>              Emit store schema JSON from sangraha blocks
   smr compile --svg <file.smr>                 Compile to SVG flow diagram
   smr compile --svg --script devanagari <file> SVG with Devanagari labels
   smr compile --out <path> <file.smr>          Write output to file
@@ -129,6 +131,16 @@ function run() {
 
     const decl = ast.decls[0]
     if (!decl) { console.error('smr: no declarations found'); process.exit(1) }
+
+    if (flags.has('--schema')) {
+      const sangrahaDecls = ast.decls.filter(d => d.kind === 'sangraha')
+      if (sangrahaDecls.length === 0) {
+        console.error('smr compile --schema: no sangraha declarations found in file')
+        process.exit(1)
+      }
+      output(toSchema(ast))
+      return
+    }
 
     if (flags.has('--openapi')) {
       const sevaDecls = ast.decls.filter(d => d.kind === 'seva')

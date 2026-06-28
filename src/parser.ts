@@ -16,7 +16,7 @@ import type {
   KriyaDecl, SparshaDecl, SparshaField, EffectChannel, EffectMode,
   KriyaStmt, AssignStmt, ExprStmt,
   SthitiBlock, SthitiField,
-  SevaDecl,
+  SevaDecl, SangrahaDecl,
 } from './ast.js'
 
 export class ParseError extends Error {
@@ -78,15 +78,16 @@ class Parser {
 
   parseFile(): SmritiFile {
     const pos = this.pos()
-    const decls: (SmritiDecl | SutraDecl | KriyaDecl | SevaDecl)[] = []
+    const decls: (SmritiDecl | SutraDecl | KriyaDecl | SevaDecl | SangrahaDecl)[] = []
     while (!this.check(TokenKind.EOF)) {
-      if (this.check(TokenKind.SMRITI))      decls.push(this.parseSmriti())
-      else if (this.check(TokenKind.SUTRA))  decls.push(this.parseSutra())
-      else if (this.check(TokenKind.KRIYA))  decls.push(this.parseKriya())
-      else if (this.check(TokenKind.SEVA))   decls.push(this.parseSeva())
+      if (this.check(TokenKind.SMRITI))        decls.push(this.parseSmriti())
+      else if (this.check(TokenKind.SUTRA))    decls.push(this.parseSutra())
+      else if (this.check(TokenKind.KRIYA))    decls.push(this.parseKriya())
+      else if (this.check(TokenKind.SEVA))     decls.push(this.parseSeva())
+      else if (this.check(TokenKind.SANGRAHA)) decls.push(this.parseSangraha())
       else {
         const t = this.peek()
-        throw new ParseError(`Expected 'smriti', 'sutra', 'kriya', or 'seva', got '${t.value}'`, t.pos)
+        throw new ParseError(`Expected 'smriti', 'sutra', 'kriya', 'seva', or 'sangraha', got '${t.value}'`, t.pos)
       }
     }
     return { kind: 'file', decls, pos }
@@ -832,6 +833,57 @@ class Parser {
       while (this.tryEat(TokenKind.COMMA)) args.push(this.parseExpression())
     }
     return args
+  }
+
+  // ─── sangraha ─────────────────────────────────────────────────────────────
+  // sangraha store-name "Display Name" {
+  //   mukhya:   id (vakya)
+  //   vivara:   field1 (type), field2 (type)
+  //   likha:    write-kriya
+  //   pathana:  read-kriya
+  //   uddhaara: query-kriya
+  //   lopa:     delete-kriya
+  // }
+  private parseSangraha(): SangrahaDecl {
+    const pos = this.pos()
+    this.eat(TokenKind.SANGRAHA)
+    const name = this.eat(TokenKind.IDENTIFIER, 'sangraha declaration').value
+    const itiName = this.check(TokenKind.STRING) ? this.advance().value : undefined
+    this.eat(TokenKind.LBRACE, `sangraha '${name}'`)
+
+    let mukhya: TypedField | undefined
+    let vivara: TypedField[] = []
+    let likha: string | undefined
+    let pathana: string | undefined
+    let uddhaara: string | undefined
+    let lopa: string | undefined
+
+    while (!this.check(TokenKind.RBRACE) && !this.check(TokenKind.EOF)) {
+      if (this.check(TokenKind.MUKHYA)) {
+        this.advance(); this.eat(TokenKind.COLON)
+        mukhya = this.parseTypedField()
+      } else if (this.check(TokenKind.VIVARA)) {
+        this.advance(); this.eat(TokenKind.COLON)
+        vivara = this.parseTypedFields()
+      } else if (this.check(TokenKind.LIKHA)) {
+        this.advance(); this.eat(TokenKind.COLON)
+        likha = this.eat(TokenKind.IDENTIFIER, `sangraha '${name}' likha`).value
+      } else if (this.check(TokenKind.PATHANA)) {
+        this.advance(); this.eat(TokenKind.COLON)
+        pathana = this.eat(TokenKind.IDENTIFIER, `sangraha '${name}' pathana`).value
+      } else if (this.check(TokenKind.UDDHAARA)) {
+        this.advance(); this.eat(TokenKind.COLON)
+        uddhaara = this.eat(TokenKind.IDENTIFIER, `sangraha '${name}' uddhaara`).value
+      } else if (this.check(TokenKind.LOPA)) {
+        this.advance(); this.eat(TokenKind.COLON)
+        lopa = this.eat(TokenKind.IDENTIFIER, `sangraha '${name}' lopa`).value
+      } else {
+        this.advance()
+      }
+    }
+
+    this.eat(TokenKind.RBRACE, `sangraha '${name}'`)
+    return { kind: 'sangraha', name, itiName, mukhya, vivara, likha, pathana, uddhaara, lopa, pos }
   }
 
   // ─── seva ─────────────────────────────────────────────────────────────────

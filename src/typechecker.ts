@@ -5,7 +5,7 @@ import type {
   Expression, GhatanaDecl,
   KriyaDecl, SparshaDecl,
   SthitiBlock,
-  SevaDecl,
+  SevaDecl, SangrahaDecl,
 } from './ast.js'
 import { nameRefStr } from './ast.js'
 import type { ResolveContext } from './resolver.js'
@@ -57,12 +57,25 @@ class Checker {
     // Build a file-wide set of impure kriya names (those with sparsha blocks).
     // Used to enforce the pure-by-default guarantee: pure kriya cannot call impure ones.
     const impureKriya = this.collectImpureKriya(file)
+    const kriyaNames = this.collectKriyaNames(file)
     for (const decl of file.decls) {
-      if (decl.kind === 'smriti')      this.checkSmriti(decl, impureKriya)
-      else if (decl.kind === 'sutra')  this.checkSutra(decl, impureKriya)
-      else if (decl.kind === 'kriya')  this.checkKriya(decl, impureKriya)
-      else if (decl.kind === 'seva')   this.checkSeva(decl)
+      if (decl.kind === 'smriti')        this.checkSmriti(decl, impureKriya)
+      else if (decl.kind === 'sutra')    this.checkSutra(decl, impureKriya)
+      else if (decl.kind === 'kriya')    this.checkKriya(decl, impureKriya)
+      else if (decl.kind === 'seva')     this.checkSeva(decl)
+      else if (decl.kind === 'sangraha') this.checkSangraha(decl, kriyaNames)
     }
+  }
+
+  private collectKriyaNames(file: SmritiFile): Set<string> {
+    const names = new Set<string>()
+    for (const decl of file.decls) {
+      if (decl.kind === 'kriya') names.add(decl.name)
+      if (decl.kind === 'smriti' || decl.kind === 'sutra') {
+        for (const k of decl.kriya) names.add(k.name)
+      }
+    }
+    return names
   }
 
   // Collects all kriya names that have a sparsha block (top-level + scoped).
@@ -439,6 +452,9 @@ class Checker {
         const t = item.target
         // bare name (e.g. aavaha payment-gateway) is an external service reference — not validated against local steps
         if (typeof t !== 'string') {
+          // TODO Layer 6 wire-up: if t.namespace matches a SangrahaDecl name in this file,
+          // validate t.name is one of: likha, pathana, uddhaara, lopa
+          // and check item.aagama/nirgama types against the store's mukhya + vivara schema.
           // qualified aavaha: gov.pan-verification — validate namespace is imported
           const ns = this.context?.imports.get(t.namespace)
           if (!ns) {
@@ -753,6 +769,42 @@ class Checker {
       // kosa keys must be a scalar type
       if (type.key.kind === 'krama' || type.key.kind === 'kosa') {
         this.fail(`kosa key type must be a scalar, not a collection`, pos)
+      }
+    }
+  }
+
+  private checkSangraha(decl: SangrahaDecl, kriyaNames: Set<string>) {
+    if (!decl.mukhya) {
+      this.fail(`sangraha '${decl.name}': mukhya (primary key) is required`, decl.pos)
+    } else {
+      const k = decl.mukhya.type.kind
+      if (k === 'krama' || k === 'kosa' || k === 'patra') {
+        this.fail(
+          `sangraha '${decl.name}': mukhya '${decl.mukhya.name}' must be a scalar type — ` +
+          `${typeStr(decl.mukhya.type)} is a collection`,
+          decl.mukhya.pos,
+        )
+      }
+      this.checkType(decl.mukhya.type, decl.mukhya.pos)
+    }
+    const seen = new Set<string>()
+    for (const f of decl.vivara) {
+      if (seen.has(f.name)) {
+        this.fail(`sangraha '${decl.name}': duplicate field '${f.name}' in vivara`, f.pos)
+      }
+      seen.add(f.name)
+      this.checkType(f.type, f.pos)
+    }
+    const ops: [string, string | undefined][] = [
+      ['likha', decl.likha], ['pathana', decl.pathana],
+      ['uddhaara', decl.uddhaara], ['lopa', decl.lopa],
+    ]
+    for (const [opName, kriyaName] of ops) {
+      if (kriyaName !== undefined && !kriyaNames.has(kriyaName)) {
+        this.fail(
+          `sangraha '${decl.name}': ${opName} bound to '${kriyaName}' but no such kriya exists in this file`,
+          decl.pos,
+        )
       }
     }
   }

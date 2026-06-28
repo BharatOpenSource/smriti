@@ -27,7 +27,7 @@ export interface Node {
 
 export interface SmritiFile extends Node {
   kind: 'file'
-  decls: (SmritiDecl | SutraDecl | KriyaDecl | SevaDecl)[]
+  decls: (SmritiDecl | SutraDecl | KriyaDecl | SevaDecl | SangrahaDecl)[]
 }
 
 export interface SmritiDecl extends Node {
@@ -311,6 +311,22 @@ export interface SevaDecl extends Node {
   path: string          // URL path, e.g. "/filings/{id}"
   aagama: TypedField[]  // request fields (body for POST/PUT/PATCH, query for GET/DELETE, path for {params})
   nirgama: TypedField[] // response body fields
+}
+
+// ─── Sangraha (persistent typed store) ───────────────────────────────────────
+
+// sangraha declares a named persistent store. Layer 6 compiles this to a JSON schema.
+// No runtime storage engine. Flow-aware wire-up: aavaha <store>.<op> — see typechecker TODO.
+export interface SangrahaDecl extends Node {
+  kind: 'sangraha'
+  name: string
+  itiName?: string
+  mukhya?: TypedField    // primary key — must be scalar
+  vivara: TypedField[]   // schema fields
+  likha?: string         // write/upsert op → kriya name (लिख)
+  pathana?: string       // read-by-key op → kriya name (पठन)
+  uddhaara?: string      // query/list op → kriya name (उद्धार)
+  lopa?: string          // delete op → kriya name (लोप)
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

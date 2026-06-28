@@ -31,6 +31,11 @@ export const enum TokenKind {
   // Service declaration keyword
   SEVA = 'seva',
 
+  // Persistent store keywords
+  SANGRAHA = 'sangraha',
+  MUKHYA = 'mukhya', VIVARA = 'vivara',
+  LIKHA = 'likha', PATHANA = 'pathana', UDDHAARA = 'uddhaara', LOPA = 'lopa',
+
   // Data keywords
   VARNA = 'varna', STHITI = 'sthiti',
 
@@ -120,6 +125,10 @@ const KEYWORDS: Record<string, TokenKind> = {
   restricted: TokenKind.RESTRICTED, private: TokenKind.PRIVATE,
   iti: TokenKind.ITI,
   seva: TokenKind.SEVA,
+  sangraha: TokenKind.SANGRAHA,
+  mukhya: TokenKind.MUKHYA,   vivara: TokenKind.VIVARA,
+  likha: TokenKind.LIKHA,     pathana: TokenKind.PATHANA,
+  uddhaara: TokenKind.UDDHAARA, lopa: TokenKind.LOPA,
 }
 
 const PUNCTUATION: Record<string, TokenKind> = {
