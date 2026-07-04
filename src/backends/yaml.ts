@@ -7,6 +7,12 @@ import type {
 } from '../ast.js'
 import { nameRefStr, exprStr } from '../ast.js'
 
+// Raised when a smriti/sutra decl can't compile to pravaaha's YAML target — as opposed to
+// a TypecheckError, this is valid Smriti that simply doesn't satisfy this backend's
+// stricter, target-specific rules (pravaaha requires every declared right to cite a
+// backing authority; other Smriti backends/uses are not required to).
+export class YamlBackendError extends Error {}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function toYaml(decl: SmritiDecl): string {
@@ -64,18 +70,26 @@ function buildParty(p: PakshaDecl): object {
   return party
 }
 
+// pravaaha's process schema requires every declared right to cite a backing authority
+// (authority.law) — no naked rights claims. Smriti's own `pramana` stays optional (it's
+// participant-scoped, not a language-level requirement), so this is enforced here, at the
+// pravaaha-target boundary, not in the typechecker.
 function buildRights(participants: PakshaDecl[]): object[] {
   const rights: object[] = []
   for (const p of participants) {
     for (const right of p.adhikara) {
-      const entry: Record<string, unknown> = {
+      if (!p.pramana) {
+        throw new YamlBackendError(
+          `paksha '${p.name}' declares adhikara '${right}' with no pramana — ` +
+          `pravaaha requires a backing authority citation for every right. ` +
+          `Add: paksha ${p.name} { ... pramana: "<law>, <section>" }`,
+        )
+      }
+      rights.push({
         party: p.name,
         right: prettify(right),
-      }
-      if (p.pramana) {
-        entry.authority = { citation: p.pramana }
-      }
-      rights.push(entry)
+        authority: { law: p.pramana },
+      })
     }
   }
   return rights
@@ -87,16 +101,18 @@ function buildSteps(
   items: FlowItem[],
   vibhagaByOn: Map<string, VibhagaDecl>,
 ): object[] {
-  const steps: object[] = []
+  const steps: Record<string, unknown>[] = []
   const consumed = new Set<VibhagaDecl>()
 
   for (const item of items) {
     if (item.kind === 'pada') {
       steps.push(buildStep(item, vibhagaByOn, consumed))
     } else if (item.kind === 'svasti') {
-      steps.push({ id: 'svasti', name: 'Completed', terminal: true, outcome: 'success' })
+      // 'terminal: true' + the id already disambiguate success/failure — pravaaha's
+      // schema has no 'outcome' field on a step.
+      steps.push({ id: 'svasti', name: 'Completed', terminal: true })
     } else if (item.kind === 'anaapta') {
-      steps.push({ id: 'anaapta', name: 'Rejected', terminal: true, outcome: 'failure' })
+      steps.push({ id: 'anaapta', name: 'Rejected', terminal: true })
     } else if (item.kind === 'sthiti') {
       steps.push({ id: item.name, name: prettify(item.name), status: item.name })
     } else if (item.kind === 'aavaha') {
@@ -109,6 +125,17 @@ function buildSteps(
     // vibhaga, anubhaga, anugama: handled elsewhere or future work
   }
 
+  // Smriti's own executor treats an unrouted step as "fall through to the next item in the
+  // flow" (cursor + 1) — there's no such implicit model in pravaaha, where every step must
+  // declare an explicit exit path. Make the fall-through explicit here so compiled YAML
+  // doesn't silently produce dangling steps.
+  for (let i = 0; i < steps.length - 1; i++) {
+    const step = steps[i]
+    const hasExit = step.next !== undefined || step.conditions !== undefined ||
+      step.loop_back !== undefined || step.terminal === true
+    if (!hasExit) step.next = steps[i + 1].id
+  }
+
   return steps
 }
 
@@ -116,7 +143,7 @@ function buildStep(
   pada: PadaDecl,
   vibhagaByOn: Map<string, VibhagaDecl>,
   consumed: Set<VibhagaDecl>,
-): object {
+): Record<string, unknown> {
   const step: Record<string, unknown> = {
     id: pada.name,
     name: prettify(pada.name),

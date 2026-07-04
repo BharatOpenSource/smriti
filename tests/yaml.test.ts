@@ -21,6 +21,7 @@ smriti passport-renewal {
   paksha applicant {
     bhumika: citizen
     adhikara: submit
+    pramana: "Passport Rules 1980, Rule 3"
   }
 
   paksha passport-office {
@@ -90,6 +91,25 @@ describe('yaml backend', () => {
     expect(out).toContain('right: Submit')
   })
 
+  it('emits authority.law from pramana (pravaaha requires a backing citation)', () => {
+    const out = emit(PASSPORT)
+    expect(out).toContain('authority:')
+    expect(out).toContain('law: Passport Act 1967, Section 5')
+  })
+
+  it('throws when a right has no pramana to back it', () => {
+    const src = `
+      smriti t {
+        paksha applicant {
+          bhumika: citizen
+          adhikara: submit
+        }
+        pravah { svasti }
+      }
+    `
+    expect(() => emit(src)).toThrow(/adhikara 'submit' with no pramana/)
+  })
+
   it('emits steps from pada declarations', () => {
     const out = emit(PASSPORT)
     expect(out).toContain('steps:')
@@ -123,8 +143,31 @@ describe('yaml backend', () => {
 
   it('emits terminal steps for svasti and anaapta', () => {
     const out = emit(PASSPORT)
+    expect(out).toContain('id: svasti')
+    expect(out).toContain('id: anaapta')
     expect(out).toContain('terminal: true')
-    expect(out).toContain('outcome: success')
-    expect(out).toContain('outcome: failure')
+  })
+
+  it('does not emit an outcome field on terminal steps (not part of pravaaha\'s schema)', () => {
+    const out = emit(PASSPORT)
+    expect(out).not.toContain('outcome:')
+  })
+
+  it('makes an unrouted step\'s implicit fall-through explicit as next', () => {
+    // pravaaha requires every step to declare next/conditions/loop_back/terminal — Smriti's
+    // own executor treats an unrouted pada as "fall through to the next flow item" (cursor+1)
+    // with no explicit field needed. The YAML backend must make that explicit.
+    const src = `
+      smriti t {
+        pravah {
+          pada first { nirgama: x (tarka) }
+          pada second { nirgama: y (tarka) }
+          svasti
+        }
+      }
+    `
+    const out = emit(src)
+    expect(out).toContain('id: first')
+    expect(out).toContain('next: second')
   })
 })

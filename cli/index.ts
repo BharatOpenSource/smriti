@@ -187,7 +187,12 @@ function run() {
           console.error('smr: this smriti has no pravah — YAML output requires a flow. Use --svg for a declaration diagram.')
           process.exit(1)
         }
-        output(toYaml(decl))
+        try {
+          output(toYaml(decl))
+        } catch (e) {
+          console.error(`smr compile: ${e instanceof Error ? e.message : String(e)}`)
+          process.exit(1)
+        }
       }
     }
     return
