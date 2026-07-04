@@ -30,8 +30,9 @@ function fieldSummary(f: TypedField): Record<string, unknown> {
 }
 
 function typeStr(t: SmritiType): string {
-  if (t.kind === 'krama') return `krama[${typeStr(t.of)}]`
-  if (t.kind === 'kosa')  return `kosa[${typeStr(t.key)}, ${typeStr(t.value)}]`
+  if (t.kind === 'krama')   return `krama[${typeStr(t.of)}]`
+  if (t.kind === 'kosa')    return `kosa[${typeStr(t.key)}, ${typeStr(t.value)}]`
+  if (t.kind === 'rachana') return `rachana[${t.fields.map(f => `${f.name} (${typeStr(f.type)})`).join(', ')}]`
   if (t.kind === 'sankhya') {
     if (t.min !== undefined || t.max !== undefined) return `sankhya ${t.min ?? ''}..${t.max ?? ''}`
   }

@@ -9,12 +9,12 @@ import type {
   AavahaDecl, SthitiDecl, TypedField, SmritiType,
   Expression, TarkaLiteral, IdentifierExpr,
   NumberLiteral, StringLiteral, CompareExpr, LogicalExpr, NotExpr,
-  NegateExpr, ArithExpr, ArithOp, CallExpr,
+  NegateExpr, ArithExpr, ArithOp, CallExpr, MemberExpr,
   CompareOp, LogicalOp,
   PravrttiDecl, PrativrttiDecl, Pos,
   NameRef,
   KriyaDecl, SparshaDecl, SparshaField, EffectChannel, EffectMode,
-  KriyaStmt, AssignStmt, ExprStmt,
+  KriyaStmt, AssignStmt, ExprStmt, IterateStmt,
   SthitiBlock, SthitiField,
   SevaDecl, SangrahaDecl,
 } from './ast.js'
@@ -601,6 +601,12 @@ class Parser {
         this.eat(TokenKind.RBRACKET, 'kosa type')
         return { kind: 'kosa', key, value }
       }
+      case TokenKind.RACHANA: {
+        this.eat(TokenKind.LBRACKET, 'rachana type')
+        const fields = this.parseTypedFields()
+        this.eat(TokenKind.RBRACKET, 'rachana type')
+        return { kind: 'rachana', fields }
+      }
       default:
         throw new ParseError(`Expected a type, got '${t.value}'`, t.pos)
     }
@@ -709,18 +715,35 @@ class Parser {
       return inner
     }
 
-    // Identifier — may be a plain reference, a local call, or a qualified call
+    // Identifier — may be a plain reference, a member access, a local call, or a qualified call
     const first = this.eat(TokenKind.IDENTIFIER, 'expression').value
 
     if (this.check(TokenKind.DOT)) {
-      // Qualified name: namespace.member — must be a call in expression position
       this.advance()
-      const member = this.eat(TokenKind.IDENTIFIER, 'qualified name in expression').value
-      const callee: NameRef = { namespace: first, name: member }
-      this.eat(TokenKind.LPAREN, `qualified call '${first}.${member}'`)
-      const args = this.parseArgList()
-      this.eat(TokenKind.RPAREN, `qualified call '${first}.${member}'`)
-      return { kind: 'call', callee, args, pos: t.pos } satisfies CallExpr
+      const member = this.eatNameLike('qualified name or member access in expression')
+
+      if (this.check(TokenKind.LPAREN)) {
+        // Qualified call: namespace.member(args)
+        const callee: NameRef = { namespace: first, name: member }
+        this.advance()
+        const args = this.parseArgList()
+        this.eat(TokenKind.RPAREN, `qualified call '${first}.${member}'`)
+        return { kind: 'call', callee, args, pos: t.pos } satisfies CallExpr
+      }
+
+      // Member access on a rachana value: object.field (chainable — item.a.b)
+      let expr: Expression = {
+        kind: 'member',
+        object: { kind: 'identifier', name: first, pos: t.pos } satisfies IdentifierExpr,
+        field: member,
+        pos: t.pos,
+      } satisfies MemberExpr
+      while (this.check(TokenKind.DOT)) {
+        this.advance()
+        const nextField = this.eatNameLike('member access in expression')
+        expr = { kind: 'member', object: expr, field: nextField, pos: t.pos } satisfies MemberExpr
+      }
+      return expr
     }
 
     if (this.check(TokenKind.LPAREN)) {
@@ -806,6 +829,7 @@ class Parser {
 
   private parseKriyaStmt(): KriyaStmt {
     const pos = this.pos()
+    if (this.check(TokenKind.KRAMANA)) return this.parseIterate()
     // Lookahead: IDENTIFIER followed immediately by EQ (=) → assign-stmt.
     // EQ is always single = (EQEQ == is a distinct token), so no ambiguity.
     if (this.check(TokenKind.IDENTIFIER) && this.tokens[this.i + 1]?.kind === TokenKind.EQ) {
@@ -816,6 +840,23 @@ class Parser {
     }
     const expr = this.parseExpression()
     return { kind: 'expr-stmt', expr, pos } satisfies ExprStmt
+  }
+
+  // kramana item : collection { body }         — krama iteration
+  // kramana key, value : collection { body }   — kosa iteration
+  private parseIterate(): IterateStmt {
+    const pos = this.pos()
+    this.eat(TokenKind.KRAMANA)
+    const bindings: string[] = [this.eat(TokenKind.IDENTIFIER, 'kramana binding').value]
+    if (this.tryEat(TokenKind.COMMA)) {
+      bindings.push(this.eat(TokenKind.IDENTIFIER, 'kramana binding').value)
+    }
+    this.eat(TokenKind.COLON, 'kramana')
+    const collection = this.eat(TokenKind.IDENTIFIER, 'kramana collection').value
+    this.eat(TokenKind.LBRACE, 'kramana body')
+    const body = this.parseKriyaBody()
+    this.eat(TokenKind.RBRACE, 'kramana body')
+    return { kind: 'iterate', bindings, collection, body, pos }
   }
 
   // ─── State (sthiti-block) ────────────────────────────────────────────────────

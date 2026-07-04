@@ -14,6 +14,7 @@ function typeToJson(type: SmritiType): JsonField {
     case 'patra':      return { type: 'object' }
     case 'krama':      return { type: 'array', items: typeToJson(type.of) }
     case 'kosa':       return { type: 'object', additionalProperties: typeToJson(type.value) }
+    case 'rachana':    return { type: 'object', properties: Object.fromEntries(type.fields.map(f => [f.name, typeToJson(f.type)])) }
   }
 }
 

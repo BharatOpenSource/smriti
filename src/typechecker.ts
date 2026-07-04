@@ -4,7 +4,7 @@ import type {
   TypedField, SmritiType, Pos,
   Expression, GhatanaDecl,
   KriyaDecl, SparshaDecl,
-  SthitiBlock,
+  SthitiBlock, IterateStmt, KriyaStmt,
   SevaDecl, SangrahaDecl, AavahaDecl,
 } from './ast.js'
 import { nameRefStr } from './ast.js'
@@ -12,8 +12,9 @@ import type { ResolveContext } from './resolver.js'
 
 // Renders a SmritiType to a short human-readable string for error messages.
 function typeStr(t: SmritiType): string {
-  if (t.kind === 'krama') return `krama[${typeStr(t.of)}]`
-  if (t.kind === 'kosa')  return `kosa[${typeStr(t.key)}, ${typeStr(t.value)}]`
+  if (t.kind === 'krama')   return `krama[${typeStr(t.of)}]`
+  if (t.kind === 'kosa')    return `kosa[${typeStr(t.key)}, ${typeStr(t.value)}]`
+  if (t.kind === 'rachana') return `rachana[${t.fields.map(f => `${f.name} (${typeStr(f.type)})`).join(', ')}]`
   if (t.kind === 'sankhya' && (t.min !== undefined || t.max !== undefined)) {
     return `sankhya ${t.min ?? ''}..${t.max ?? ''}`
   }
@@ -21,7 +22,7 @@ function typeStr(t: SmritiType): string {
   return t.kind
 }
 
-// Validates type constraints recursively (inner types of krama/kosa included).
+// Validates type constraints recursively (inner types of krama/kosa/rachana included).
 function checkTypeConstraints(t: SmritiType, pos: Pos, fail: (msg: string, p: Pos) => void) {
   if (t.kind === 'sankhya') {
     if (t.min !== undefined && t.max !== undefined && t.min > t.max) {
@@ -35,6 +36,14 @@ function checkTypeConstraints(t: SmritiType, pos: Pos, fail: (msg: string, p: Po
   }
   if (t.kind === 'krama') checkTypeConstraints(t.of, pos, fail)
   if (t.kind === 'kosa')  { checkTypeConstraints(t.key, pos, fail); checkTypeConstraints(t.value, pos, fail) }
+  if (t.kind === 'rachana') {
+    const seen = new Set<string>()
+    for (const f of t.fields) {
+      if (seen.has(f.name)) fail(`rachana: duplicate field '${f.name}'`, pos)
+      seen.add(f.name)
+      checkTypeConstraints(f.type, pos, fail)
+    }
+  }
 }
 
 export class TypecheckError extends Error {
@@ -175,6 +184,7 @@ class Checker {
       case 'negate':         return 'number'
       case 'arith':          return 'number'
       case 'call':           return 'unknown'   // resolved when kriya typechecker runs
+      case 'member':         return 'unknown'   // rachana field type not tracked at this pass
     }
   }
 
@@ -260,6 +270,12 @@ class Checker {
         for (const arg of expr.args) this.checkExpression(arg)
         return
       }
+
+      case 'member':
+        // object is always an identifier or nested member — rachana field types aren't
+        // tracked at this pass (mirrors 'identifier'/'call' — deferred to data-flow/runtime).
+        this.checkExpression(expr.object)
+        return
     }
   }
 
@@ -337,6 +353,10 @@ class Checker {
     if (a.kind !== b.kind) return false
     if (a.kind === 'krama' && b.kind === 'krama') return this.typesMatch(a.of, b.of)
     if (a.kind === 'kosa'  && b.kind === 'kosa')  return this.typesMatch(a.key, b.key) && this.typesMatch(a.value, b.value)
+    if (a.kind === 'rachana' && b.kind === 'rachana') {
+      if (a.fields.length !== b.fields.length) return false
+      return a.fields.every((f, i) => f.name === b.fields[i].name && this.typesMatch(f.type, b.fields[i].type))
+    }
     return true
   }
 
@@ -664,17 +684,12 @@ class Checker {
     const thisIsPure = !decl.sparsha
 
     // Names available in the body: aagama inputs + sthiti cells (pre-initialised), then assigns.
-    const produced = new Set<string>(decl.aagama.map(f => f.name))
-    if (decl.sthitiBlock) for (const f of decl.sthitiBlock.fields) produced.add(f.name)
+    const fieldTypes = new Map<string, SmritiType>()
+    for (const f of decl.aagama) fieldTypes.set(f.name, f.type)
+    if (decl.sthitiBlock) for (const f of decl.sthitiBlock.fields) fieldTypes.set(f.name, f.type)
+    const produced = new Set<string>(fieldTypes.keys())
 
-    for (const stmt of decl.body) {
-      if (stmt.kind === 'assign') {
-        this.checkExprPurity(stmt.expr, decl.name, thisIsPure, impureKriya)
-        produced.add(stmt.name)
-      } else {
-        this.checkExprPurity(stmt.expr, decl.name, thisIsPure, impureKriya)
-      }
-    }
+    this.checkKriyaBody(decl.body, produced, fieldTypes, decl.name, thisIsPure, impureKriya)
 
     // Every required nirgama field must be assigned at least once in the body.
     for (const f of decl.nirgama) {
@@ -684,6 +699,90 @@ class Checker {
           decl.pos,
         )
       }
+    }
+  }
+
+  // Type-checks a straight-line statement list (a kriya body, or a kramana loop body).
+  // Mutates `produced` with every assign target seen so callers can check nirgama coverage.
+  private checkKriyaBody(
+    stmts: KriyaStmt[],
+    produced: Set<string>,
+    fieldTypes: Map<string, SmritiType>,
+    callerName: string,
+    callerIsPure: boolean,
+    impureKriya: Set<string>,
+  ) {
+    for (const stmt of stmts) {
+      if (stmt.kind === 'assign') {
+        this.checkExprPurity(stmt.expr, callerName, callerIsPure, impureKriya)
+        produced.add(stmt.name)
+      } else if (stmt.kind === 'expr-stmt') {
+        this.checkExprPurity(stmt.expr, callerName, callerIsPure, impureKriya)
+      } else {
+        this.checkIterate(stmt, produced, fieldTypes, callerName, callerIsPure, impureKriya)
+      }
+    }
+  }
+
+  // kramana item : collection { body } — collection must be a krama or kosa field already
+  // in scope; bindings are bound to the element type(s) for the loop body only. Assignments
+  // inside the body to names that existed before the loop (an accumulator) propagate back
+  // out — the loop bindings themselves do not.
+  private checkIterate(
+    stmt: IterateStmt,
+    produced: Set<string>,
+    fieldTypes: Map<string, SmritiType>,
+    callerName: string,
+    callerIsPure: boolean,
+    impureKriya: Set<string>,
+  ) {
+    if (!produced.has(stmt.collection)) {
+      this.fail(
+        `kramana: '${stmt.collection}' is not a declared aagama/sthiti field — ` +
+        `available: ${[...produced].join(', ') || '(none)'}`,
+        stmt.pos,
+      )
+      return
+    }
+
+    const collectionType = fieldTypes.get(stmt.collection)
+    const innerTypes = new Map(fieldTypes)
+
+    if (collectionType === undefined) {
+      // Bound by a prior assign with no tracked declared type — allow; loop bindings stay untyped.
+    } else if (collectionType.kind === 'krama') {
+      if (stmt.bindings.length !== 1) {
+        this.fail(
+          `kramana over krama '${stmt.collection}' takes exactly one binding, got ${stmt.bindings.length}`,
+          stmt.pos,
+        )
+      } else {
+        innerTypes.set(stmt.bindings[0], collectionType.of)
+      }
+    } else if (collectionType.kind === 'kosa') {
+      if (stmt.bindings.length !== 2) {
+        this.fail(
+          `kramana over kosa '${stmt.collection}' takes exactly two bindings (key, value), got ${stmt.bindings.length}`,
+          stmt.pos,
+        )
+      } else {
+        innerTypes.set(stmt.bindings[0], collectionType.key)
+        innerTypes.set(stmt.bindings[1], collectionType.value)
+      }
+    } else {
+      this.fail(
+        `kramana: '${stmt.collection}' is ${typeStr(collectionType)} — must be krama or kosa`,
+        stmt.pos,
+      )
+    }
+
+    const innerProduced = new Set(produced)
+    for (const b of stmt.bindings) innerProduced.add(b)
+
+    this.checkKriyaBody(stmt.body, innerProduced, innerTypes, callerName, callerIsPure, impureKriya)
+
+    for (const name of innerProduced) {
+      if (!stmt.bindings.includes(name)) produced.add(name)
     }
   }
 

@@ -23,6 +23,7 @@ function smritiTypeToJsonSchema(type: SmritiType): JsonSchema {
     case 'patra':      return { type: 'object' }
     case 'krama':      return { type: 'array', items: smritiTypeToJsonSchema(type.of) }
     case 'kosa':       return { type: 'object', additionalProperties: smritiTypeToJsonSchema(type.value) }
+    case 'rachana':    return fieldsToSchema(type.fields)
   }
 }
 

@@ -284,7 +284,7 @@ export interface SparshaField extends Node {
 
 // ─── kriya statements ─────────────────────────────────────────────────────────
 
-export type KriyaStmt = AssignStmt | ExprStmt
+export type KriyaStmt = AssignStmt | ExprStmt | IterateStmt
 
 // assign-stmt: name = expression. name must be a declared nirgama field or local binding.
 export interface AssignStmt extends Node {
@@ -297,6 +297,16 @@ export interface AssignStmt extends Node {
 export interface ExprStmt extends Node {
   kind: 'expr-stmt'
   expr: Expression
+}
+
+// iterate-stmt (kramana): walks a krama or kosa-typed local, running body once per element.
+// One binding = krama element value. Two bindings = kosa [key, value].
+// `collection` is a plain identifier — an aagama/sthiti field of krama or kosa type.
+export interface IterateStmt extends Node {
+  kind: 'iterate'
+  bindings: string[]
+  collection: string
+  body: KriyaStmt[]
 }
 
 // ─── Seva (service endpoint declaration) ─────────────────────────────────────
@@ -349,6 +359,7 @@ export type SmritiType =
   | { kind: 'patra' }
   | { kind: 'krama'; of: SmritiType }
   | { kind: 'kosa'; key: SmritiType; value: SmritiType }
+  | { kind: 'rachana'; fields: TypedField[] }
 
 // ─── Expressions ──────────────────────────────────────────────────────────────
 
@@ -363,6 +374,7 @@ export type Expression =
   | NegateExpr
   | ArithExpr
   | CallExpr
+  | MemberExpr
 
 export interface TarkaLiteral extends Node {
   kind: 'tarka-literal'
@@ -427,6 +439,15 @@ export interface CallExpr extends Node {
   args: Expression[]
 }
 
+// member-expr: object.field — dot access into a rachana-typed value (e.g. a kramana
+// loop binding). object is always an identifier or another member-expr — never a call,
+// so member access can never itself violate the pure/impure kriya boundary.
+export interface MemberExpr extends Node {
+  kind: 'member'
+  object: Expression
+  field: string
+}
+
 // Render any expression to a human-readable string (for backends/diagnostics).
 export function exprStr(expr: Expression): string {
   switch (expr.kind) {
@@ -440,5 +461,6 @@ export function exprStr(expr: Expression): string {
     case 'negate':         return `-${exprStr(expr.operand)}`
     case 'arith':          return `(${exprStr(expr.left)} ${expr.op} ${exprStr(expr.right)})`
     case 'call':           return `${nameRefStr(expr.callee)}(${expr.args.map(exprStr).join(', ')})`
+    case 'member':         return `${exprStr(expr.object)}.${expr.field}`
   }
 }

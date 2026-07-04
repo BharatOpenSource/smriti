@@ -27,6 +27,7 @@ export const enum TokenKind {
 
   // Computation keywords
   KRIYA = 'kriya', SPARSHA = 'sparsha',
+  KRAMANA = 'kramana',
 
   // Service declaration keyword
   SEVA = 'seva',
@@ -43,6 +44,7 @@ export const enum TokenKind {
   SANKHYA = 'sankhya', BHINNAANKA = 'bhinnaanka', DASHAAMSHA = 'dashaamsha',
   VAKYA = 'vakya', TITHI = 'tithi', ANTARA = 'antara',
   TARKA = 'tarka', PATRA = 'patra', KRAMA = 'krama', KOSA = 'kosa',
+  RACHANA = 'rachana',
   VIKALPA = 'vikalpa',
 
   // tarka values
@@ -120,6 +122,7 @@ const KEYWORDS: Record<string, TokenKind> = {
   antara: TokenKind.ANTARA,       tarka: TokenKind.TARKA,
   patra: TokenKind.PATRA,         krama: TokenKind.KRAMA,
   kosa: TokenKind.KOSA,           vikalpa: TokenKind.VIKALPA,
+  kramana: TokenKind.KRAMANA,     rachana: TokenKind.RACHANA,
   satya: TokenKind.SATYA,         asatya: TokenKind.ASATYA,
   avyakta: TokenKind.AVYAKTA,     public: TokenKind.PUBLIC,
   restricted: TokenKind.RESTRICTED, private: TokenKind.PRIVATE,

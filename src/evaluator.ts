@@ -1,9 +1,12 @@
-import type { Expression, KriyaDecl, SmritiFile, SthitiBlock } from './ast.js'
+import type { Expression, KriyaDecl, KriyaStmt, IterateStmt, SmritiFile, SthitiBlock } from './ast.js'
 import { nameRefStr } from './ast.js'
 
 // ─── Value types ──────────────────────────────────────────────────────────────
 
-export type EvalValue = number | string | boolean | null
+// Arrays back krama values; plain objects back both kosa (string-keyed map) and
+// rachana (named record) values — the two are only distinguished by static type,
+// not by runtime shape.
+export type EvalValue = number | string | boolean | null | EvalValue[] | { [key: string]: EvalValue }
 
 // null → avyakta (indeterminate — unresolved or error)
 export type TarkaValue = 'satya' | 'asatya' | 'avyakta'
@@ -56,17 +59,53 @@ export function evaluateKriya(decl: KriyaDecl, args: EvalValue[], env: KriyaEnv)
     locals[decl.aagama[i].name] = args[i] ?? null
   }
 
-  // Execute body statements in order
-  for (const stmt of decl.body) {
+  executeKriyaBody(decl.body, locals, env)
+  return locals
+}
+
+// Executes a straight-line statement list — a kriya body, or a kramana loop body —
+// against a shared mutable `locals` payload. Reused so accumulator patterns
+// (`total = total + item` inside a kramana loop) mutate the same locals the caller reads.
+function executeKriyaBody(stmts: KriyaStmt[], locals: Payload, env: KriyaEnv): void {
+  for (const stmt of stmts) {
     if (stmt.kind === 'assign') {
       locals[stmt.name] = evaluate(stmt.expr, locals, env)
-    } else {
-      // expr-stmt: evaluate for side effects, discard value
+    } else if (stmt.kind === 'expr-stmt') {
       evaluate(stmt.expr, locals, env)
+    } else {
+      executeIterate(stmt, locals, env)
     }
   }
+}
 
-  return locals
+// kramana item : collection { body } — one binding, collection is an array (krama).
+// kramana key, value : collection { body } — two bindings, collection is an object (kosa).
+// Loop bindings are removed from locals once the loop ends; anything else the body
+// assigns (an accumulator that existed before the loop) stays, since locals is shared.
+function executeIterate(stmt: IterateStmt, locals: Payload, env: KriyaEnv): void {
+  const collection = locals[stmt.collection]
+
+  if (Array.isArray(collection)) {
+    const [itemName] = stmt.bindings
+    for (const item of collection) {
+      locals[itemName] = item
+      executeKriyaBody(stmt.body, locals, env)
+    }
+    delete locals[itemName]
+    return
+  }
+
+  if (collection !== null && typeof collection === 'object') {
+    const [keyName, valueName] = stmt.bindings
+    for (const [k, v] of Object.entries(collection)) {
+      locals[keyName] = k
+      locals[valueName] = v
+      executeKriyaBody(stmt.body, locals, env)
+    }
+    delete locals[keyName]
+    delete locals[valueName]
+  }
+  // collection missing/null (avyakta) — zero iterations, not an error.
 }
 
 // ─── Evaluator ───────────────────────────────────────────────────────────────
@@ -147,6 +186,13 @@ export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv): Ev
       // Multiple nirgama: return first. Full multi-return belongs with the process executor (Layer 4).
       if (kriya.nirgama.length >= 1) return result[kriya.nirgama[0].name] ?? null
       return null
+    }
+
+    case 'member': {
+      const obj = evaluate(expr.object, payload, env)
+      if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return null
+      const v = obj[expr.field]
+      return v !== undefined ? v : null
     }
   }
 }
