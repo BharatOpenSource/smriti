@@ -136,8 +136,54 @@ These are still real gaps if/when Smriti moves toward self-hosting.
 19 new tests in `tests/kramana.test.ts` (552 total). Verified end-to-end via `smr run --kriya`
 for both a `krama[krama[T]]` matrix sum and a `krama[rachana[...]]` payroll sum.
 
+### Ternary conditional + budgeted recursion — decided 2026-07-04
+
+**Motivation:** recursion already type-checked (a kriya calling itself was never rejected) but
+was a real hazard — there was no conditional/branching construct inside a kriya body at all, so
+a recursive call had no way to express a base case, and would just recurse until the JS stack
+overflowed. Also found in passing: `+` between strings failed the typechecker even though the
+runtime already handled concatenation correctly (JS `+` does this natively) — a narrow but real
+bug, fixed alongside.
+
+**Ternary `condition ? then : else`:** no new Sanskrit vocabulary — expression-level operators in
+Smriti are already meta-notation symbols (`==`, `&&`, `!`, etc.), not Sanskrit words; a ternary
+operator fits that existing bucket rather than the "structural keyword" bucket kramana/rachana
+came from. Lowest precedence, right-associative (`a ? b : c ? d : e` reads as `a ? b : (c ? d : e)`).
+Condition must be tarka-typed; `avyakta` condition yields an `avyakta` result (consistent with
+how `&&`/`||` already propagate `avyakta`).
+
+**`+` string concatenation fix:** the typechecker rejected `vakya + vakya` outright. Now `+`
+between two concrete `vakya`-typed operands is accepted as concatenation; a concrete numeric/tarka
+operand paired with a concrete string operand is still rejected as a real mismatch. `-`/`*`/`/`/`%`
+remain numeric-only. No evaluator change was needed — JS's `+` already concatenates at runtime
+regardless of the `as number` cast in `src/evaluator.ts`.
+
+**Budgeted recursion:** `evaluate()`/`evaluateKriya()` now thread an optional `budget: number[]`
+(default `[1000]`, shared by reference across the whole call tree — same "flat counter" model the
+process executor already uses for its step budget). Decremented once per `'call'` expression
+evaluated; throws `kriya call budget exceeded calling '<name>' — possible infinite recursion` when
+exhausted. Default kept well below Node's raw stack-frame limit on purpose: each budget unit
+unwinds through several real JS stack frames (`evaluate` → `evaluateKriya` → `executeKriyaBody` →
+`evaluate(ternary)` → `evaluate(call)` → ...), so a budget too close to the frame ceiling hits a
+raw `Maximum call stack size exceeded` before our own clearer error fires — verified empirically
+before picking 1000. No static termination proof is attempted (undecidable in general); this
+mirrors the executor's own philosophy of a runtime budget over a compile-time guarantee.
+
+**CLI fix in passing:** `smr run --kriya` never wrapped `evaluateKriya` in a try/catch — it never
+needed to before, since nothing could throw. Now it does, printing a clean error instead of an
+uncaught-exception stack dump.
+
+**Closures:** explicitly deferred — no first-class function values anywhere in the language yet
+(kriya are only ever called by name), and no concrete use case identified. Revisit if one appears.
+
+13 new tests in `tests/ternary-recursion.test.ts` (565 total). Verified end-to-end via
+`smr run --kriya`: a real `factorial(6) = 720`, and an unbounded self-call failing cleanly with
+the budget-exceeded message instead of crashing the CLI process.
+
 ## Open Questions / Tasks
 
 - [ ] Layer 7 — darshana (UI component model) — Path 1: spec emit; Path 2: native component (far)
 - [ ] tree-sitter standalone — separate session (own repo, nvim-treesitter, Linguist)
 - [ ] smr fetch — blocked on pravaaha registry endpoint
+- [ ] Closures — deferred, watch for a concrete use case before designing anything
+- [ ] String primitives beyond `+` concat (length, substring, indexOf) — not scoped yet

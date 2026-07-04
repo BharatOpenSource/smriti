@@ -98,6 +98,24 @@ deliberate non-goals (no index access, no map/filter/reduce, no arithmetic on co
 
 ---
 
+### Ternary + budgeted recursion ✓ (cross-cutting, not layer-numbered)
+
+Recursion already type-checked but had no way to express a base case (no conditional construct
+existed inside a kriya) and no safety guard — a self-recursive kriya would just overflow the JS
+stack. Added a `condition ? then : else` ternary (symbolic, no new Sanskrit word — expression
+operators are already meta-notation, same bucket as `==`/`&&`), plus a shared call-depth budget
+(`evaluate`/`evaluateKriya` thread `budget: number[]`, default 1000, same flat-counter model the
+executor already uses) so unbounded recursion fails cleanly instead of crashing. Also fixed a
+narrow typechecker bug found in passing: `vakya + vakya` (string concatenation) was rejected even
+though the runtime already handled it correctly.
+
+13 new tests in `tests/ternary-recursion.test.ts` (565 total). Verified end-to-end: real
+`factorial(6) = 720` via `smr run --kriya`, and an infinite self-call fails with a clean CLI error
+instead of a stack-trace crash. Full design in `docs/ConvoQA-3.md`. Closures deliberately deferred
+— no first-class function values in the language yet, no concrete need identified.
+
+---
+
 ### Layer 7 — UI / Component Model
 **Key concept:** `darshana` (दर्शन) — UI component / view
 

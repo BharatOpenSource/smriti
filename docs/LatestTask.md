@@ -77,8 +77,31 @@ krama/kosa constraints, grammar v0.3, tree-sitter regenerated, sutra YAML backen
 - Full design + deliberate non-goals (no index access, no map/filter/reduce, no arithmetic on
   collections) in `docs/ConvoQA-3.md`.
 
+---
+
+## Session: 2026-07-04 (continued) — ternary + budgeted recursion
+
+**Ternary + recursion ✓ — 565 tests, 28 files**
+
+- `condition ? then : else` ternary expression — no new Sanskrit word (expression operators are
+  already symbolic meta-notation, not vocabulary). Needed as the only branching construct inside
+  a kriya body, so a recursive call can express a base case.
+- `evaluate`/`evaluateKriya` now thread a shared `budget: number[]` (default 1000) — a kriya call
+  budget mirroring the executor's step budget. Self-recursion now fails cleanly with "call budget
+  exceeded" instead of crashing the JS stack. Default picked empirically to stay below Node's raw
+  stack-frame limit (each budget unit unwinds several real frames).
+- Fixed a narrow typechecker bug: `vakya + vakya` (string concat) was rejected even though the
+  runtime already handled it correctly via JS's native `+`.
+- CLI fix: `smr run --kriya` never wrapped `evaluateKriya` in try/catch (nothing could throw
+  before this). Now it does.
+- 13 new tests in `tests/ternary-recursion.test.ts`. Verified end-to-end: `factorial(6) = 720`
+  and a clean CLI error on unbounded recursion.
+- Closures deliberately deferred — no first-class functions in the language, no concrete need yet.
+
 ## Open items
 
 - [ ] **Layer 7 — darshana**: UI component/view declaration; far horizon
 - [ ] **tree-sitter standalone**: separate session — own BharatOpenSource repo, nvim-treesitter, Linguist
 - [ ] **smr fetch HTTP**: blocked — needs live pravaaha registry endpoint
+- [ ] **String primitives beyond `+` concat** (length, substring, indexOf) — not scoped yet
+- [ ] **Closures** — watch for a concrete use case before designing anything
