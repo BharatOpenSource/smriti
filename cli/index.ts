@@ -16,6 +16,10 @@ import { buildRegistry, buildSangrahaEnv } from '../src/registry.js'
 
 const VERSION = '0.1.0'
 
+// Default registry — a thin org/name@version resolver over each process's own GitHub repo
+// (see pravaaha/registry). Self-hostable: override via SMR_REGISTRY_URL for a different instance.
+const DEFAULT_REGISTRY_URL = 'https://pravaaha-registry.srikarbuddhiraju.workers.dev'
+
 const HELP = `
 smr — Smriti language toolchain v${VERSION}
 
@@ -34,7 +38,7 @@ Usage:
   smr trigger <file.smr> --payload <json>      Evaluate ghatana against a payload
   smr schedule <file.smr>                      Run smriti on its hetu schedule (Ctrl+C to stop)
   smr schedule <file.smr> --once               Run once immediately (skips the timer)
-  smr fetch <org/name@version>                 Prime local registry cache
+  smr fetch <org/name@version>                 Fetch from the registry and cache locally
   smr fetch <org/name@version> --from <file>   Cache a local file as a registry entry
 
 Options:
@@ -95,7 +99,7 @@ function output(content: string) {
   }
 }
 
-function run() {
+async function run() {
   if (command === 'check') {
     const file = files[0]
     if (!file) { console.error('Usage: smr check <file>'); process.exit(1) }
@@ -418,30 +422,57 @@ function run() {
 
     const cachePath = registryCachePath(uri)
 
-    if (!fromArg) {
-      // Registry not yet live — show where to put the file manually.
-      console.error(`smr: registry not yet live — no HTTP endpoint to fetch from.`)
-      console.error(`To prime the cache manually:`)
-      console.error(`  smr fetch ${uriArg} --from ./your-local-copy.smr`)
-      console.error(`Cache path: ${cachePath}`)
+    if (fromArg) {
+      // --from <file>: read, validate, write to cache.
+      const source = readSource(fromArg)
+      try {
+        const ast = parse(source)
+        const context = resolveImports(ast, resolve(fromArg))
+        typecheck(ast, context)
+      } catch (e) {
+        console.error(`smr fetch: source file failed validation`)
+        console.error(String(e))
+        process.exit(1)
+      }
+
+      mkdirSync(dirname(cachePath), { recursive: true })
+      writeFileSync(cachePath, source, 'utf8')
+      console.log(`✓  Cached ${uriArg}`)
+      console.log(`   ${cachePath}`)
+      return
+    }
+
+    // No --from: resolve over HTTP against the registry.
+    const registryUrl = process.env.SMR_REGISTRY_URL ?? DEFAULT_REGISTRY_URL
+    const fetchUrl = `${registryUrl}/${uri.org}/${uri.name}/${uri.version}`
+    let response: Response
+    try {
+      response = await fetch(fetchUrl)
+    } catch (e) {
+      console.error(`smr fetch: could not reach registry at ${registryUrl}`)
+      console.error(String(e))
+      process.exit(1)
+    }
+    if (!response.ok) {
+      console.error(`smr fetch: ${uriArg} not found (registry responded ${response.status})`)
+      console.error(await response.text())
       process.exit(1)
     }
 
-    // --from <file>: read, validate, write to cache.
-    const source = readSource(fromArg)
+    const source = await response.text()
     try {
       const ast = parse(source)
-      const context = resolveImports(ast, resolve(fromArg))
+      const context = resolveImports(ast, cachePath)
       typecheck(ast, context)
     } catch (e) {
-      console.error(`smr fetch: source file failed validation`)
+      console.error(`smr fetch: fetched source failed validation`)
       console.error(String(e))
       process.exit(1)
     }
 
     mkdirSync(dirname(cachePath), { recursive: true })
     writeFileSync(cachePath, source, 'utf8')
-    console.log(`✓  Cached ${uriArg}`)
+    console.log(`✓  Fetched and cached ${uriArg}`)
     console.log(`   ${cachePath}`)
     return
   }
@@ -451,4 +482,4 @@ function run() {
   process.exit(1)
 }
 
-run()
+run().catch(e => { console.error(String(e)); process.exit(1) })
