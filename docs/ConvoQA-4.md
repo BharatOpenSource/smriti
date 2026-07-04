@@ -49,6 +49,21 @@ pravaaha's own error reporting rather than a confusing downstream schema-validat
 
 4 new tests in `tests/yaml.test.ts` (569 total).
 
+### `smr fetch` HTTP — decided 2026-07-04
+
+`smr fetch <org/name@version>` (no `--from`) now makes a real HTTP request instead of erroring
+"registry not yet live." Default target: `https://pravaaha-registry.srikarbuddhiraju.workers.dev`
+(pravaaha's new registry Worker — a thin GitHub-repo resolver, see `pravaaha/registry/README.md`),
+overridable via `SMR_REGISTRY_URL` for anyone self-hosting their own instance. `cli/index.ts`'s
+`run()` is now `async` to support this. Fetched content goes through the same parse/typecheck
+validation as the `--from <file>` path before being written to the local cache.
+
+Verified: a real 404 against the live deployed endpoint for a nonexistent tag; the full
+fetch→validate→cache path against a local stand-in server (no real `.smr` content is published
+under this convention anywhere yet, so a genuine 200 from the live endpoint couldn't be tested
+end-to-end this session — the relay logic itself was verified separately against a real tagged
+GitHub file).
+
 ## Open Questions / Tasks
 
 - [ ] Grammar spec (`spec/grammar.ebnf`) not yet bumped for kramana/rachana/ternary — v0.5 is stale

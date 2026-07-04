@@ -77,62 +77,28 @@ any word-like token after the dot (`eatNameLike`), not just plain identifiers.
 
 ---
 
-### Collections & Records — kramana + rachana ✓ (cross-cutting, not layer-numbered)
+### Cross-cutting additions ✓ (not layer-numbered — full design in ConvoQA-3.md/ConvoQA-4.md)
 
-Closes the "can Smriti do maths on matrices / heterogeneous data" gap: `krama`/`kosa` fields
-were declarable but not walkable, and there was no named-field record type. Two additions:
+- **Collections & records** — `kramana` (iterate a krama/kosa inside a kriya body, loop-scoped
+  bindings, accumulator-via-assignment) + `rachana` (heterogeneous named-field record type,
+  nestable inside krama/kosa, read via `member` expressions). Matrices
+  (`krama[krama[sankhya]]`) and record lists (`krama[rachana[...]]`) work end-to-end. 19 tests.
+- **Ternary + budgeted recursion** — `condition ? then : else` (the only branching construct
+  inside a kriya) plus a shared call-depth budget (`evaluate`/`evaluateKriya` thread
+  `budget: number[]`, default 1000) so self-recursion fails cleanly instead of overflowing the
+  JS stack. Also fixed `vakya + vakya` string concatenation, wrongly rejected by the
+  typechecker. Verified with `factorial(6) = 720`. Closures deliberately deferred. 13 tests.
+- **pravaaha YAML backend fixes** — real integration testing against pravaaha's actual schema
+  (not smriti's assumptions) found 3 bugs: rights need a `pramana` citation (enforced via
+  `YamlBackendError` in the backend, not the typechecker — pravaaha's policy, not Smriti's),
+  `authority.citation` → `authority.law`, and implicit step fall-through now emits explicit
+  `next:`. 4 tests.
+- **`smr fetch` goes live** — pravaaha's new registry Worker (thin, self-hostable GitHub-repo
+  resolver, no database) is live at `pravaaha-registry.srikarbuddhiraju.workers.dev`; `smr fetch`
+  hits it by default, overridable via `SMR_REGISTRY_URL`. Closes the `sangama`/registry import
+  seam that was stubbed since the resolver was first built.
 
-- **`kramana`** — iterate over a krama (`kramana item : numbers { ... }`) or kosa
-  (`kramana key, value : scores { ... }`) inside a kriya body. Bindings are loop-scoped;
-  assignments to pre-existing names (an accumulator) propagate out — that's how sum/reduce
-  works today, since there's no separate reduce primitive. Loops nest, so
-  `krama[krama[sankhya]]` (a matrix) is walkable with two nested `kramana` loops.
-- **`rachana`** — heterogeneous named-field record type, same bracket idiom as krama/kosa:
-  `rachana[name (vakya), age (sankhya)]`, nestable (`krama[rachana[...]]` = list of records).
-  New `member` expression (`item.field`, chainable) is the only way to read a field.
-
-Runtime: `EvalValue` extended to include arrays (krama) and plain objects (kosa/rachana).
-19 new tests in `tests/kramana.test.ts` (552 total). Verified end-to-end via `smr run --kriya`
-with a real matrix sum and a record-list sum. See `docs/ConvoQA-3.md` for full design and
-deliberate non-goals (no index access, no map/filter/reduce, no arithmetic on collections).
-
----
-
-### Ternary + budgeted recursion ✓ (cross-cutting, not layer-numbered)
-
-Recursion already type-checked but had no way to express a base case (no conditional construct
-existed inside a kriya) and no safety guard — a self-recursive kriya would just overflow the JS
-stack. Added a `condition ? then : else` ternary (symbolic, no new Sanskrit word — expression
-operators are already meta-notation, same bucket as `==`/`&&`), plus a shared call-depth budget
-(`evaluate`/`evaluateKriya` thread `budget: number[]`, default 1000, same flat-counter model the
-executor already uses) so unbounded recursion fails cleanly instead of crashing. Also fixed a
-narrow typechecker bug found in passing: `vakya + vakya` (string concatenation) was rejected even
-though the runtime already handled it correctly.
-
-13 new tests in `tests/ternary-recursion.test.ts` (565 total). Verified end-to-end: real
-`factorial(6) = 720` via `smr run --kriya`, and an infinite self-call fails with a clean CLI error
-instead of a stack-trace crash. Full design in `docs/ConvoQA-3.md`. Closures deliberately deferred
-— no first-class function values in the language yet, no concrete need identified.
-
----
-
-### pravaaha integration — YAML backend fixes ✓ (cross-cutting, not layer-numbered)
-
-pravaaha wired up `.smr` as a source format (`pvh validate`/`publish` shell out to `smr compile`).
-First real end-to-end test against pravaaha's actual schema — not smriti's assumptions about
-it — surfaced three genuine bugs in `src/backends/yaml.ts`:
-
-- Rights need a backing authority citation (pravaaha's rule) — `pramana` is optional in core
-  Smriti, so this is now enforced in the YAML backend specifically (throws `YamlBackendError`),
-  not the typechecker. Core Smriti stays permissive; the pravaaha *target* stays strict.
-- `authority.citation` → `authority.law` (pravaaha's schema never had `citation`).
-- Implicit step fall-through (Smriti's executor treats an unrouted pada as "next flow item") is
-  now made explicit as `next:` in the compiled YAML — pravaaha has no implicit model and rejects
-  dangling steps.
-
-4 new tests in `tests/yaml.test.ts` (569 total). Verified end-to-end: a full invoice-payment-style
-process passes `pvh validate` against the real schema; a process missing `pramana` fails cleanly
-at `smr compile` instead of downstream in pravaaha. Full design in `docs/ConvoQA-4.md`.
+Running total: 569 tests, 28 files.
 
 ---
 
@@ -154,6 +120,7 @@ Done        Layers 1–6 + 6.2 — kriya, sthiti, effects, executor + aavaha reg
             sangraha, sangraha flow wire-up (aavaha store.op)
             Cross-step error validation, runtime scheduling also complete
             Collections & records — kramana (iteration) + rachana (record type)
+            Ternary + budgeted recursion; pravaaha YAML fixes; smr fetch (registry) live
 
 Next        Layer 7 — darshana (UI spec)
 
