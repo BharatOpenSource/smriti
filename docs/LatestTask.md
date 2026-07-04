@@ -98,6 +98,28 @@ krama/kosa constraints, grammar v0.3, tree-sitter regenerated, sutra YAML backen
   and a clean CLI error on unbounded recursion.
 - Closures deliberately deferred — no first-class functions in the language, no concrete need yet.
 
+---
+
+## Session: 2026-07-04 (continued) — pravaaha integration, YAML backend fixes
+
+**pravaaha `.smr` source format ✓ — 569 tests, 28 files**
+
+- pravaaha now consumes `.smr` directly: `pvh validate`/`publish` detect the extension, shell
+  out to `smr compile` (linked as a local `file:../smriti` npm dependency), and validate the
+  compiled YAML — same pipeline as hand-written `process.yaml`.
+- First real end-to-end test against pravaaha's actual schema (not smriti's assumptions about
+  it) surfaced 3 bugs in `src/backends/yaml.ts`, all fixed:
+  - Rights now require a backing `pramana` — enforced in the YAML backend (throws
+    `YamlBackendError`), not the typechecker, since this is pravaaha's policy, not Smriti's.
+  - `authority.citation` → `authority.law` (key-name bug).
+  - Unrouted steps now get an explicit `next:` — Smriti's implicit fall-through has no analog
+    in pravaaha's step model.
+  - Dropped the non-schema `outcome` field on terminal steps.
+- 4 new tests in `tests/yaml.test.ts`. Verified end-to-end: a full invoice-payment-style `.smr`
+  process passes `pvh validate` against the real schema; `pvh publish` reaches the confirmation
+  prompt; a process missing `pramana` fails cleanly at `smr compile`.
+- Full design in `docs/ConvoQA-4.md`.
+
 ## Open items
 
 - [ ] **Layer 7 — darshana**: UI component/view declaration; far horizon
@@ -105,3 +127,5 @@ krama/kosa constraints, grammar v0.3, tree-sitter regenerated, sutra YAML backen
 - [ ] **smr fetch HTTP**: blocked — needs live pravaaha registry endpoint
 - [ ] **String primitives beyond `+` concat** (length, substring, indexOf) — not scoped yet
 - [ ] **Closures** — watch for a concrete use case before designing anything
+- [ ] **Full pravaaha schema audit** — only rights/steps/terminals checked against the real
+      schema so far; `references`/`uses`/`immutability`/`rights_reference` not yet verified

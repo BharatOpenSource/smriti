@@ -116,6 +116,26 @@ instead of a stack-trace crash. Full design in `docs/ConvoQA-3.md`. Closures del
 
 ---
 
+### pravaaha integration — YAML backend fixes ✓ (cross-cutting, not layer-numbered)
+
+pravaaha wired up `.smr` as a source format (`pvh validate`/`publish` shell out to `smr compile`).
+First real end-to-end test against pravaaha's actual schema — not smriti's assumptions about
+it — surfaced three genuine bugs in `src/backends/yaml.ts`:
+
+- Rights need a backing authority citation (pravaaha's rule) — `pramana` is optional in core
+  Smriti, so this is now enforced in the YAML backend specifically (throws `YamlBackendError`),
+  not the typechecker. Core Smriti stays permissive; the pravaaha *target* stays strict.
+- `authority.citation` → `authority.law` (pravaaha's schema never had `citation`).
+- Implicit step fall-through (Smriti's executor treats an unrouted pada as "next flow item") is
+  now made explicit as `next:` in the compiled YAML — pravaaha has no implicit model and rejects
+  dangling steps.
+
+4 new tests in `tests/yaml.test.ts` (569 total). Verified end-to-end: a full invoice-payment-style
+process passes `pvh validate` against the real schema; a process missing `pramana` fails cleanly
+at `smr compile` instead of downstream in pravaaha. Full design in `docs/ConvoQA-4.md`.
+
+---
+
 ### Layer 7 — UI / Component Model
 **Key concept:** `darshana` (दर्शन) — UI component / view
 

@@ -187,3 +187,5 @@ the budget-exceeded message instead of crashing the CLI process.
 - [ ] smr fetch — blocked on pravaaha registry endpoint
 - [ ] Closures — deferred, watch for a concrete use case before designing anything
 - [ ] String primitives beyond `+` concat (length, substring, indexOf) — not scoped yet
+
+> Continued in [ConvoQA-4.md](ConvoQA-4.md) — YAML backend / pravaaha integration fixes.
