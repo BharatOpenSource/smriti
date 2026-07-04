@@ -92,6 +92,50 @@ as seva → OpenAPI: emit a well-defined spec, let the consumer choose the stora
   accepting any word-like token after the dot (`parseNameRef` → `eatNameLike`), since a keyword
   cannot start a new statement in that position — no grammar ambiguity introduced.
 
+### kramana + rachana — collections and records — decided 2026-07-04
+
+**Motivation:** kriya bodies could declare `krama[T]`/`kosa[K,V]` fields but had no way to walk
+them (no loop construct) and no heterogeneous named-field type to put inside them (only scalars).
+Basic arithmetic worked; anything matrix- or record-shaped was inert data you could pass around
+but never process. This closes that gap.
+
+**`kramana` — iteration:**
+- Syntax: `kramana item : collection { body }` (krama, one binding) or
+  `kramana key, value : collection { body }` (kosa, two bindings).
+- `collection` is a plain identifier already in scope (an aagama or sthiti field, or a name
+  assigned earlier in the body) — no arbitrary expressions, no index access.
+- Bindings are scoped to the loop body only. Assignments inside the body to names that already
+  existed before the loop (an accumulator, e.g. `total = total + item`) propagate back out —
+  this is how you get a sum/reduce today, since there's no separate reduce primitive.
+- Loops nest freely — `kramana row : rows { kramana cell : row { ... } }` walks a
+  `krama[krama[sankhya]]`, i.e. a matrix.
+- Typechecker (`checkIterate`): collection must resolve to a declared krama/kosa; binding count
+  must match (1 for krama, 2 for kosa); body is checked recursively with bindings added to a
+  local scope that doesn't leak.
+- Evaluator: `executeKriyaBody`/`executeIterate` in `src/evaluator.ts` run the body against a
+  shared mutable `locals` object per iteration — arrays back krama values, plain objects back
+  kosa/rachana values (`EvalValue` extended to include both). Loop bindings are deleted from
+  `locals` once the loop ends.
+
+**`rachana` — heterogeneous record type:**
+- Syntax: `rachana[field1 (type1), field2 (type2), ...]` — same bracket idiom as `krama[T]`/
+  `kosa[K,V]`, so it composes the same way: `krama[rachana[...]]` is a list of records.
+- New `member` expression (`item.field`, chainable — `item.a.b`) is the only way to read a
+  rachana field. Parser: `eatNameLike` for the field name (same fix as the Layer 6.2 qualified-
+  name bug — field names shouldn't be restricted to non-keywords either).
+- Typechecker treats member access like identifiers/calls — deferred, 'unknown' category, no
+  deep field-type binding at this pass (matches the existing shallow rigor of kriya-body
+  checking; `checkTypeConstraints` does recurse into rachana fields for duplicate-name /
+  constraint validation at the type-declaration level).
+
+**Not done (deliberately out of scope):** no index-based access into krama, no map/filter/reduce
+primitives beyond accumulator-via-assignment, no `break`/`continue`, no arithmetic/comparison
+operators on krama/kosa/rachana values themselves (only usable via `kramana` + member access).
+These are still real gaps if/when Smriti moves toward self-hosting.
+
+19 new tests in `tests/kramana.test.ts` (552 total). Verified end-to-end via `smr run --kriya`
+for both a `krama[krama[T]]` matrix sum and a `krama[rachana[...]]` payroll sum.
+
 ## Open Questions / Tasks
 
 - [ ] Layer 7 — darshana (UI component model) — Path 1: spec emit; Path 2: native component (far)

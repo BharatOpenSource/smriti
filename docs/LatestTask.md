@@ -60,6 +60,23 @@ krama/kosa constraints, grammar v0.3, tree-sitter regenerated, sutra YAML backen
   `IDENTIFIER`. Added `eatNameLike()` to accept any word-like token as a qualified-name member.
 - 10 new tests in `tests/sangraha-flow.test.ts`; verified end-to-end via `smr run`/`smr check`
 
+---
+
+## Session: 2026-07-04 (continued) — kramana + rachana
+
+**Collections & records ✓ — 552 tests, 27 files**
+
+- `kramana` — iterate over krama (1 binding) or kosa (2 bindings: key, value) inside a kriya
+  body. Bindings are loop-scoped; assignments to pre-existing names (accumulator pattern)
+  propagate out. Loops nest — `krama[krama[sankhya]]` matrices are walkable.
+- `rachana` — heterogeneous named-field record type, `rachana[name (vakya), age (sankhya)]`,
+  nestable inside krama/kosa. New `member` expression (`item.field`, chainable) reads a field.
+- `EvalValue` extended to arrays (krama) + plain objects (kosa/rachana) in `src/evaluator.ts`.
+- 19 new tests in `tests/kramana.test.ts`. Verified end-to-end via `smr run --kriya`: a real
+  matrix sum (`krama[krama[sankhya]]`) and a payroll sum over `krama[rachana[...]]`.
+- Full design + deliberate non-goals (no index access, no map/filter/reduce, no arithmetic on
+  collections) in `docs/ConvoQA-3.md`.
+
 ## Open items
 
 - [ ] **Layer 7 — darshana**: UI component/view declaration; far horizon

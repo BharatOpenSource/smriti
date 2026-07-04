@@ -77,6 +77,27 @@ any word-like token after the dot (`eatNameLike`), not just plain identifiers.
 
 ---
 
+### Collections & Records — kramana + rachana ✓ (cross-cutting, not layer-numbered)
+
+Closes the "can Smriti do maths on matrices / heterogeneous data" gap: `krama`/`kosa` fields
+were declarable but not walkable, and there was no named-field record type. Two additions:
+
+- **`kramana`** — iterate over a krama (`kramana item : numbers { ... }`) or kosa
+  (`kramana key, value : scores { ... }`) inside a kriya body. Bindings are loop-scoped;
+  assignments to pre-existing names (an accumulator) propagate out — that's how sum/reduce
+  works today, since there's no separate reduce primitive. Loops nest, so
+  `krama[krama[sankhya]]` (a matrix) is walkable with two nested `kramana` loops.
+- **`rachana`** — heterogeneous named-field record type, same bracket idiom as krama/kosa:
+  `rachana[name (vakya), age (sankhya)]`, nestable (`krama[rachana[...]]` = list of records).
+  New `member` expression (`item.field`, chainable) is the only way to read a field.
+
+Runtime: `EvalValue` extended to include arrays (krama) and plain objects (kosa/rachana).
+19 new tests in `tests/kramana.test.ts` (552 total). Verified end-to-end via `smr run --kriya`
+with a real matrix sum and a record-list sum. See `docs/ConvoQA-3.md` for full design and
+deliberate non-goals (no index access, no map/filter/reduce, no arithmetic on collections).
+
+---
+
 ### Layer 7 — UI / Component Model
 **Key concept:** `darshana` (दर्शन) — UI component / view
 
@@ -94,6 +115,7 @@ Two paths, sequenced:
 Done        Layers 1–6 + 6.2 — kriya, sthiti, effects, executor + aavaha registry, seva,
             sangraha, sangraha flow wire-up (aavaha store.op)
             Cross-step error validation, runtime scheduling also complete
+            Collections & records — kramana (iteration) + rachana (record type)
 
 Next        Layer 7 — darshana (UI spec)
 
@@ -127,4 +149,6 @@ CLI, diff engine, hash computation, semantic validation — all `kriya` blocks.
 |------|-----------|-----------------|-------|--------|
 | seva | सेवा | Service endpoint declaration | 5 | Done — OpenAPI emit |
 | sangraha | संग्रह | Persistent typed store | 6 | Done — JSON schema emit + flow wire-up (6.2) |
+| kramana | क्रमण | Iterate over a krama/kosa in a kriya body | — | Done |
+| rachana | रचना | Heterogeneous named-field record type | — | Done |
 | darshana | दर्शन | UI component / view | 7 | Proposed |

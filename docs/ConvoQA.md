@@ -150,6 +150,15 @@ This is architectural coherence from first principles, not coincidence.
 | kriya | क्रिया | Named reusable computation block (function). Panini's term for verbal root/action. |
 | sparsha | स्पर्श | Effect declaration block inside impure kriya — "what it touches externally" (HTTP, file, events). |
 
+**Collections & Records (2 terms) — locked 2026-07-04**
+
+| Term | Devanagari | Meaning |
+|------|-----------|---------|
+| kramana | क्रमण | Iterates over a krama or kosa inside a kriya body. Shares the √kram root with krama (list type) — "proceeding step by step" through a sequence. |
+| rachana | रचना | Heterogeneous named-field record type — nestable inside krama/kosa (e.g. `krama[rachana[name (vakya), age (sankhya)]]`). Accessed via member dot (`item.name`). |
+
+See [ConvoQA-3.md](ConvoQA-3.md) for full design (syntax, semantics, scoping rules).
+
 ### Toolchain — locked 2026-06-27
 
 - **Implementation language:** TypeScript
