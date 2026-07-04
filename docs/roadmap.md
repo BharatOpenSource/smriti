@@ -59,10 +59,21 @@ GET/DELETE → query params; POST/PUT/PATCH → request body. No runtime, no new
 optional op bindings: likha/pathana/uddhaara/lopa → named kriya.
 `smr compile --schema <file.smr>` emits `{ version, stores[] }` JSON. No runtime storage engine.
 Typechecker validates key type, no duplicate fields, op bindings reference real kriya.
-Flow wire-up prepared: `aavaha store.op` TODO comment in `checkAavaha` — one block to turn on.
-36 tests.
 
-**Layer 6.2 (next):** `aavaha filings.likha` dispatch in typechecker + executor.
+### Layer 6.2 — sangraha flow wire-up ✓
+
+`aavaha store.op` (e.g. `aavaha items.likha`) dispatches to the kriya bound to that operation.
+Typechecker validates: op is one of likha/pathana/uddhaara/lopa and is bound on the store;
+aagama/nirgama fields match the store's mukhya + vivara schema by name and type; pathana/lopa
+additionally require the mukhya field in aagama (they act on one identified record). Executor
+looks up the store by namespace, calls the bound kriya with aagama values from the flow context,
+and binds its nirgama back positionally — same call convention as `kaarya: kriya name(...)`.
+
+Parser fix along the way: qualified-name members (`store.likha`) previously required
+`TokenKind.IDENTIFIER`, but sangraha op names are reserved keywords — `parseNameRef` now accepts
+any word-like token after the dot (`eatNameLike`), not just plain identifiers.
+
+10 new tests in `tests/sangraha-flow.test.ts`.
 
 ---
 
@@ -80,13 +91,11 @@ Two paths, sequenced:
 ## Sequencing
 
 ```
-Done        Layers 1–6 — kriya, sthiti, effects, executor + aavaha registry, seva, sangraha
+Done        Layers 1–6 + 6.2 — kriya, sthiti, effects, executor + aavaha registry, seva,
+            sangraha, sangraha flow wire-up (aavaha store.op)
             Cross-step error validation, runtime scheduling also complete
 
-Next        Layer 6.2 — sangraha flow wire-up
-            aavaha store.op dispatch in typechecker + executor
-
-Then        Layer 7 — darshana (UI spec)
+Next        Layer 7 — darshana (UI spec)
 
 Later       Layer 7 path 1 — darshana as UI spec
             pravaaha GUI builder reads .smr
@@ -117,5 +126,5 @@ CLI, diff engine, hash computation, semantic validation — all `kriya` blocks.
 | Term | Devanagari | Proposed meaning | Layer | Status |
 |------|-----------|-----------------|-------|--------|
 | seva | सेवा | Service endpoint declaration | 5 | Done — OpenAPI emit |
-| sangraha | संग्रह | Persistent typed store | 6 | Done — JSON schema emit; flow wire-up = 6.2 |
+| sangraha | संग्रह | Persistent typed store | 6 | Done — JSON schema emit + flow wire-up (6.2) |
 | darshana | दर्शन | UI component / view | 7 | Proposed |

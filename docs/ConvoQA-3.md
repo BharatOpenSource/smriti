@@ -71,9 +71,29 @@ already supports qualified NameRef. Wire-up adds one validation block — no AST
 **Compile target format:** JSON, not SQL DDL or Prisma schema. Backend-neutral. Same approach
 as seva → OpenAPI: emit a well-defined spec, let the consumer choose the storage engine.
 
+### sangraha Layer 6.2 — flow wire-up — decided 2026-07-04
+
+`aavaha store.op` now dispatches to the kriya bound to that sangraha operation. Design:
+
+- **Op validity:** `op` must be one of `likha`/`pathana`/`uddhaara`/`lopa`, and must actually be
+  bound on the store (ops are optional — a read-only store has no `likha`/`lopa`).
+- **Schema check:** every `aagama`/`nirgama` field on the `aavaha` step must match a field on the
+  store (mukhya or vivara) by name and type — the step's fields ARE the store's schema, not the
+  bound kriya's own parameter names.
+- **Key requirement:** `pathana` (read) and `lopa` (delete) act on one identified record, so their
+  `aagama` must include the mukhya field. `likha` (upsert) and `uddhaara` (query) don't require it —
+  upsert provides the whole record, query may filter on anything or nothing.
+- **Executor dispatch:** looks up the store by namespace, resolves the bound kriya via `env`, builds
+  positional args from the step's own `aagama` values (already present in flow context — validated
+  above), calls `evaluateKriya`, binds the result back into `nirgama` positionally (same convention
+  as `kaarya: kriya name(...)` in a `pada`).
+- **Parser fix required:** `store.likha` failed to parse — qualified-name members required
+  `TokenKind.IDENTIFIER`, but `likha`/`pathana`/`uddhaara`/`lopa` are reserved keywords. Fixed by
+  accepting any word-like token after the dot (`parseNameRef` → `eatNameLike`), since a keyword
+  cannot start a new statement in that position — no grammar ambiguity introduced.
+
 ## Open Questions / Tasks
 
 - [ ] Layer 7 — darshana (UI component model) — Path 1: spec emit; Path 2: native component (far)
-- [ ] sangraha Layer 6.2 — flow wire-up: `aavaha store.op` validation in typechecker + executor
 - [ ] tree-sitter standalone — separate session (own repo, nvim-treesitter, Linguist)
 - [ ] smr fetch — blocked on pravaaha registry endpoint

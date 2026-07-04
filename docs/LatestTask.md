@@ -44,9 +44,24 @@ krama/kosa constraints, grammar v0.3, tree-sitter regenerated, sutra YAML backen
 
 ---
 
+---
+
+## Session: 2026-07-04
+
+**Layer 6.2 — sangraha flow wire-up ✓ — 533 tests, 26 files**
+
+- `aavaha store.op` (e.g. `items.likha`) now dispatches to the kriya bound to that sangraha op
+- Typechecker: op must be valid + bound; aagama/nirgama must match store's mukhya+vivara schema;
+  pathana/lopa require mukhya in aagama (`checkSangrahaAavaha` in `src/typechecker.ts`)
+- Executor: resolves store → bound kriya → calls it with flow-context values → binds nirgama back
+  (`src/executor.ts` aavaha case; new `stores?: SangrahaEnv` param threaded through)
+- New `buildSangrahaEnv()` in `src/registry.ts`; CLI (`smr run`, `smr schedule`) wires it up
+- **Parser fix:** `parseNameRef` rejected `store.likha` — op names are reserved keywords, not
+  `IDENTIFIER`. Added `eatNameLike()` to accept any word-like token as a qualified-name member.
+- 10 new tests in `tests/sangraha-flow.test.ts`; verified end-to-end via `smr run`/`smr check`
+
 ## Open items
 
 - [ ] **Layer 7 — darshana**: UI component/view declaration; far horizon
-- [ ] **sangraha Layer 6.2 — flow wire-up**: `aavaha store.op` in typechecker + executor; switch already prepared
 - [ ] **tree-sitter standalone**: separate session — own BharatOpenSource repo, nvim-treesitter, Linguist
 - [ ] **smr fetch HTTP**: blocked — needs live pravaaha registry endpoint
