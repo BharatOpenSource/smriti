@@ -375,6 +375,7 @@ export type Expression =
   | ArithExpr
   | CallExpr
   | MemberExpr
+  | TernaryExpr
 
 export interface TarkaLiteral extends Node {
   kind: 'tarka-literal'
@@ -448,6 +449,16 @@ export interface MemberExpr extends Node {
   field: string
 }
 
+// ternary-expr: condition ? then : else. Lowest precedence, right-associative.
+// The only branching construct available inside a kriya body/expression — needed for a
+// recursive kriya to express a base case. avyakta condition yields an avyakta result.
+export interface TernaryExpr extends Node {
+  kind: 'ternary'
+  condition: Expression
+  then: Expression
+  else: Expression
+}
+
 // Render any expression to a human-readable string (for backends/diagnostics).
 export function exprStr(expr: Expression): string {
   switch (expr.kind) {
@@ -462,5 +473,6 @@ export function exprStr(expr: Expression): string {
     case 'arith':          return `(${exprStr(expr.left)} ${expr.op} ${exprStr(expr.right)})`
     case 'call':           return `${nameRefStr(expr.callee)}(${expr.args.map(exprStr).join(', ')})`
     case 'member':         return `${exprStr(expr.object)}.${expr.field}`
+    case 'ternary':        return `(${exprStr(expr.condition)} ? ${exprStr(expr.then)} : ${exprStr(expr.else)})`
   }
 }

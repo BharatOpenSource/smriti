@@ -182,9 +182,17 @@ class Checker {
       case 'logical':        return 'tarka'
       case 'not':            return 'tarka'
       case 'negate':         return 'number'
-      case 'arith':          return 'number'
+      case 'arith':
+        // '+' between strings is concatenation, not addition.
+        return expr.op === '+' && (this.exprType(expr.left) === 'string' || this.exprType(expr.right) === 'string')
+          ? 'string' : 'number'
       case 'call':           return 'unknown'   // resolved when kriya typechecker runs
       case 'member':         return 'unknown'   // rachana field type not tracked at this pass
+      case 'ternary': {
+        const tt = this.exprType(expr.then)
+        const et = this.exprType(expr.else)
+        return tt === et ? tt : 'unknown'
+      }
     }
   }
 
@@ -256,6 +264,19 @@ class Checker {
         this.checkExpression(expr.right)
         const lt = this.exprType(expr.left)
         const rt = this.exprType(expr.right)
+
+        // '+' between strings is concatenation — only reject a concrete numeric/tarka
+        // operand paired with a concrete string operand (a real mismatch, not addition).
+        if (expr.op === '+' && (lt === 'string' || rt === 'string')) {
+          if (lt === 'number' || lt === 'tarka') {
+            this.fail(`left side of '+' is ${lt} but right side is string — mismatched types for concatenation`, expr.left.pos)
+          }
+          if (rt === 'number' || rt === 'tarka') {
+            this.fail(`right side of '+' is ${rt} but left side is string — mismatched types for concatenation`, expr.right.pos)
+          }
+          return
+        }
+
         if (lt === 'tarka' || lt === 'string') {
           this.fail(`left side of '${expr.op}' is ${lt} — expected numeric expression`, expr.left.pos)
         }
@@ -276,6 +297,17 @@ class Checker {
         // tracked at this pass (mirrors 'identifier'/'call' — deferred to data-flow/runtime).
         this.checkExpression(expr.object)
         return
+
+      case 'ternary': {
+        this.checkExpression(expr.condition)
+        const ct = this.exprType(expr.condition)
+        if (ct === 'number' || ct === 'string') {
+          this.fail(`ternary condition is ${ct} — expected a tarka expression`, expr.condition.pos)
+        }
+        this.checkExpression(expr.then)
+        this.checkExpression(expr.else)
+        return
+      }
     }
   }
 
@@ -810,6 +842,11 @@ class Checker {
     }
     if (expr.kind === 'not' || expr.kind === 'negate') {
       this.checkExprPurity(expr.operand, callerName, callerIsPure, impureKriya)
+    }
+    if (expr.kind === 'ternary') {
+      this.checkExprPurity(expr.condition, callerName, callerIsPure, impureKriya)
+      this.checkExprPurity(expr.then, callerName, callerIsPure, impureKriya)
+      this.checkExprPurity(expr.else, callerName, callerIsPure, impureKriya)
     }
   }
 

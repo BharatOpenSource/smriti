@@ -9,7 +9,7 @@ import type {
   AavahaDecl, SthitiDecl, TypedField, SmritiType,
   Expression, TarkaLiteral, IdentifierExpr,
   NumberLiteral, StringLiteral, CompareExpr, LogicalExpr, NotExpr,
-  NegateExpr, ArithExpr, ArithOp, CallExpr, MemberExpr,
+  NegateExpr, ArithExpr, ArithOp, CallExpr, MemberExpr, TernaryExpr,
   CompareOp, LogicalOp,
   PravrttiDecl, PrativrttiDecl, Pos,
   NameRef,
@@ -614,9 +614,22 @@ class Parser {
 
   // ─── Expressions ─────────────────────────────────────────────────────────────
   // Recursive descent (low to high precedence):
-  //   logical_or > logical_and > comparison > additive > multiplicative > unary > primary
+  //   ternary > logical_or > logical_and > comparison > additive > multiplicative > unary > primary
 
-  private parseExpression(): Expression { return this.parseLogicalOr() }
+  private parseExpression(): Expression { return this.parseTernary() }
+
+  // condition ? then : else — lowest precedence, right-associative (then/else may
+  // themselves be ternaries: `a ? b : c ? d : e` reads as `a ? b : (c ? d : e)`).
+  private parseTernary(): Expression {
+    const condition = this.parseLogicalOr()
+    if (this.tryEat(TokenKind.QUESTION)) {
+      const thenExpr = this.parseTernary()
+      this.eat(TokenKind.COLON, 'ternary expression')
+      const elseExpr = this.parseTernary()
+      return { kind: 'ternary', condition, then: thenExpr, else: elseExpr, pos: condition.pos } satisfies TernaryExpr
+    }
+    return condition
+  }
 
   private parseLogicalOr(): Expression {
     let left = this.parseLogicalAnd()

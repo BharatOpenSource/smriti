@@ -46,7 +46,20 @@ export function buildInitialState(block: SthitiBlock, env: KriyaEnv): Payload {
   return state
 }
 
-export function evaluateKriya(decl: KriyaDecl, args: EvalValue[], env: KriyaEnv): Payload {
+// Default call budget for one root evaluateKriya/evaluate invocation — shared by reference
+// across every nested call (including recursive self-calls) in that call tree, the same
+// "flat step counter" model the process executor uses. A kriya has no conditional other
+// than the ternary expression, so this is the only thing standing between a recursive
+// kriya and an infinite JS call stack.
+//
+// Kept well below Node's default stack limit on purpose: each budget unit is one kriya
+// call, but that unwinds through several real JS stack frames (evaluate → evaluateKriya →
+// executeKriyaBody → evaluate(ternary) → evaluate(call) → ...), so a budget anywhere near
+// the raw frame limit hits a real "Maximum call stack size exceeded" before our own
+// (clearer) error fires. 1,000 leaves comfortable headroom across environments.
+const DEFAULT_CALL_BUDGET = 1_000
+
+export function evaluateKriya(decl: KriyaDecl, args: EvalValue[], env: KriyaEnv, budget: number[] = [DEFAULT_CALL_BUDGET]): Payload {
   const locals: Payload = {}
 
   // Seed sthiti initial state (kriya-local; re-initialised on each call)
@@ -59,21 +72,21 @@ export function evaluateKriya(decl: KriyaDecl, args: EvalValue[], env: KriyaEnv)
     locals[decl.aagama[i].name] = args[i] ?? null
   }
 
-  executeKriyaBody(decl.body, locals, env)
+  executeKriyaBody(decl.body, locals, env, budget)
   return locals
 }
 
 // Executes a straight-line statement list — a kriya body, or a kramana loop body —
 // against a shared mutable `locals` payload. Reused so accumulator patterns
 // (`total = total + item` inside a kramana loop) mutate the same locals the caller reads.
-function executeKriyaBody(stmts: KriyaStmt[], locals: Payload, env: KriyaEnv): void {
+function executeKriyaBody(stmts: KriyaStmt[], locals: Payload, env: KriyaEnv, budget: number[]): void {
   for (const stmt of stmts) {
     if (stmt.kind === 'assign') {
-      locals[stmt.name] = evaluate(stmt.expr, locals, env)
+      locals[stmt.name] = evaluate(stmt.expr, locals, env, budget)
     } else if (stmt.kind === 'expr-stmt') {
-      evaluate(stmt.expr, locals, env)
+      evaluate(stmt.expr, locals, env, budget)
     } else {
-      executeIterate(stmt, locals, env)
+      executeIterate(stmt, locals, env, budget)
     }
   }
 }
@@ -82,14 +95,14 @@ function executeKriyaBody(stmts: KriyaStmt[], locals: Payload, env: KriyaEnv): v
 // kramana key, value : collection { body } — two bindings, collection is an object (kosa).
 // Loop bindings are removed from locals once the loop ends; anything else the body
 // assigns (an accumulator that existed before the loop) stays, since locals is shared.
-function executeIterate(stmt: IterateStmt, locals: Payload, env: KriyaEnv): void {
+function executeIterate(stmt: IterateStmt, locals: Payload, env: KriyaEnv, budget: number[]): void {
   const collection = locals[stmt.collection]
 
   if (Array.isArray(collection)) {
     const [itemName] = stmt.bindings
     for (const item of collection) {
       locals[itemName] = item
-      executeKriyaBody(stmt.body, locals, env)
+      executeKriyaBody(stmt.body, locals, env, budget)
     }
     delete locals[itemName]
     return
@@ -100,7 +113,7 @@ function executeIterate(stmt: IterateStmt, locals: Payload, env: KriyaEnv): void
     for (const [k, v] of Object.entries(collection)) {
       locals[keyName] = k
       locals[valueName] = v
-      executeKriyaBody(stmt.body, locals, env)
+      executeKriyaBody(stmt.body, locals, env, budget)
     }
     delete locals[keyName]
     delete locals[valueName]
@@ -110,7 +123,10 @@ function executeIterate(stmt: IterateStmt, locals: Payload, env: KriyaEnv): void
 
 // ─── Evaluator ───────────────────────────────────────────────────────────────
 
-export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv): EvalValue {
+// `budget` defaults to a fresh counter per top-level call so callers that never touch
+// recursion (ghatana conditions, sthiti init, varna/khanda expressions) are unaffected —
+// it's only consumed (and only matters) once a 'call' expression is actually evaluated.
+export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv, budget: number[] = [DEFAULT_CALL_BUDGET]): EvalValue {
   switch (expr.kind) {
     case 'number-literal': return expr.value
     case 'string-literal': return expr.value
@@ -123,8 +139,8 @@ export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv): Ev
     }
 
     case 'compare': {
-      const l = evaluate(expr.left, payload, env)
-      const r = evaluate(expr.right, payload, env)
+      const l = evaluate(expr.left, payload, env, budget)
+      const r = evaluate(expr.right, payload, env, budget)
       if (l === null || r === null) return null
       switch (expr.op) {
         case '==': return l === r
@@ -137,8 +153,8 @@ export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv): Ev
     }
 
     case 'logical': {
-      const l = evaluate(expr.left, payload, env)
-      const r = evaluate(expr.right, payload, env)
+      const l = evaluate(expr.left, payload, env, budget)
+      const r = evaluate(expr.right, payload, env, budget)
       if (expr.op === '&&') {
         if (l === false || r === false) return false
         if (l === null || r === null) return null
@@ -151,22 +167,24 @@ export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv): Ev
     }
 
     case 'not': {
-      const v = evaluate(expr.operand, payload, env)
+      const v = evaluate(expr.operand, payload, env, budget)
       if (v === null) return null
       return !v
     }
 
     case 'negate': {
-      const v = evaluate(expr.operand, payload, env)
+      const v = evaluate(expr.operand, payload, env, budget)
       if (v === null) return null
       return -(v as number)
     }
 
     case 'arith': {
-      const l = evaluate(expr.left, payload, env)
-      const r = evaluate(expr.right, payload, env)
+      const l = evaluate(expr.left, payload, env, budget)
+      const r = evaluate(expr.right, payload, env, budget)
       if (l === null || r === null) return null
       switch (expr.op) {
+        // '+' does double duty: numeric addition, or string concatenation when either
+        // side is a string (the typechecker only allows this when both sides agree).
         case '+': return (l as number) + (r as number)
         case '-': return (l as number) - (r as number)
         case '*': return (l as number) * (r as number)
@@ -180,8 +198,11 @@ export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv): Ev
       const name = nameRefStr(expr.callee)
       const kriya = env.get(name)
       if (!kriya) return null  // unknown kriya — avyakta
-      const args = expr.args.map(a => evaluate(a, payload, env))
-      const result = evaluateKriya(kriya, args, env)
+      const args = expr.args.map(a => evaluate(a, payload, env, budget))
+      if (budget[0]-- <= 0) {
+        throw new Error(`kriya call budget exceeded calling '${name}' — possible infinite recursion`)
+      }
+      const result = evaluateKriya(kriya, args, env, budget)
       // Single nirgama: return its value directly (the common case).
       // Multiple nirgama: return first. Full multi-return belongs with the process executor (Layer 4).
       if (kriya.nirgama.length >= 1) return result[kriya.nirgama[0].name] ?? null
@@ -189,10 +210,17 @@ export function evaluate(expr: Expression, payload: Payload, env?: KriyaEnv): Ev
     }
 
     case 'member': {
-      const obj = evaluate(expr.object, payload, env)
+      const obj = evaluate(expr.object, payload, env, budget)
       if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return null
       const v = obj[expr.field]
       return v !== undefined ? v : null
+    }
+
+    case 'ternary': {
+      const cond = evaluate(expr.condition, payload, env, budget)
+      if (cond === true)  return evaluate(expr.then, payload, env, budget)
+      if (cond === false) return evaluate(expr.else, payload, env, budget)
+      return null   // avyakta condition — avyakta result
     }
   }
 }

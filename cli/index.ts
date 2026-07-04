@@ -223,7 +223,12 @@ function run() {
         process.exit(1)
       }
       const argValues = kriya.aagama.map(f => payload[f.name] ?? null)
-      const result = evaluateKriya(kriya, argValues, env)
+      let result
+      try {
+        result = evaluateKriya(kriya, argValues, env)
+      } catch (e) {
+        console.error(`smr run: ${String(e instanceof Error ? e.message : e)}`); process.exit(1)
+      }
       if (kriya.nirgama.length === 0) {
         console.log('(kriya has no nirgama — ran for side effects)')
       } else {

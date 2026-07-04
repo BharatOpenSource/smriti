@@ -69,7 +69,7 @@ export const enum TokenKind {
   LBRACKET = '[', RBRACKET = ']',
   COLON = ':', COMMA = ',',
   DOT = '.', DOTDOT = '..',
-  ARROW = '→',
+  ARROW = '→', QUESTION = '?',
 
   // Expression operators
   EQ = '=',
@@ -141,6 +141,7 @@ const PUNCTUATION: Record<string, TokenKind> = {
   ':': TokenKind.COLON,    ',': TokenKind.COMMA,
   '.': TokenKind.DOT,
   '→': TokenKind.ARROW,
+  '?': TokenKind.QUESTION,
 }
 
 export class LexError extends Error {
