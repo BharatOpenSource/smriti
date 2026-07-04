@@ -61,10 +61,23 @@ class Parser {
   private parseNameRef(): NameRef {
     const first = this.eat(TokenKind.IDENTIFIER).value
     if (this.tryEat(TokenKind.DOT)) {
-      const member = this.eat(TokenKind.IDENTIFIER, 'qualified name').value
+      const member = this.eatNameLike('qualified name')
       return { namespace: first, name: member }
     }
     return first
+  }
+
+  // Accepts an identifier OR a Sanskrit keyword token as a plain name. Used for the
+  // member half of a qualified name (e.g. `items.likha`), where reserved words like
+  // sangraha op names (likha/pathana/uddhaara/lopa) are valid members, not keywords —
+  // the DOT already disambiguates this position from a statement start.
+  private eatNameLike(context: string): string {
+    const tok = this.peek()
+    if (/^[A-Za-z_][A-Za-z0-9_-]*$/.test(tok.value)) {
+      this.advance()
+      return tok.value
+    }
+    throw new ParseError(`Expected identifier in ${context}, got '${tok.value || tok.kind}'`, tok.pos)
   }
 
   // Parses optional `iti <name>` after a closing brace. Returns the name or undefined.

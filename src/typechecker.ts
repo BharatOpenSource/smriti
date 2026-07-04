@@ -5,7 +5,7 @@ import type {
   Expression, GhatanaDecl,
   KriyaDecl, SparshaDecl,
   SthitiBlock,
-  SevaDecl, SangrahaDecl,
+  SevaDecl, SangrahaDecl, AavahaDecl,
 } from './ast.js'
 import { nameRefStr } from './ast.js'
 import type { ResolveContext } from './resolver.js'
@@ -58,13 +58,22 @@ class Checker {
     // Used to enforce the pure-by-default guarantee: pure kriya cannot call impure ones.
     const impureKriya = this.collectImpureKriya(file)
     const kriyaNames = this.collectKriyaNames(file)
+    const sangrahaDecls = this.collectSangrahaDecls(file)
     for (const decl of file.decls) {
-      if (decl.kind === 'smriti')        this.checkSmriti(decl, impureKriya)
-      else if (decl.kind === 'sutra')    this.checkSutra(decl, impureKriya)
+      if (decl.kind === 'smriti')        this.checkSmriti(decl, impureKriya, sangrahaDecls)
+      else if (decl.kind === 'sutra')    this.checkSutra(decl, impureKriya, sangrahaDecls)
       else if (decl.kind === 'kriya')    this.checkKriya(decl, impureKriya)
       else if (decl.kind === 'seva')     this.checkSeva(decl)
       else if (decl.kind === 'sangraha') this.checkSangraha(decl, kriyaNames)
     }
+  }
+
+  private collectSangrahaDecls(file: SmritiFile): Map<string, SangrahaDecl> {
+    const map = new Map<string, SangrahaDecl>()
+    for (const decl of file.decls) {
+      if (decl.kind === 'sangraha') map.set(decl.name, decl)
+    }
+    return map
   }
 
   private collectKriyaNames(file: SmritiFile): Set<string> {
@@ -90,7 +99,7 @@ class Checker {
     return names
   }
 
-  private checkSmriti(decl: SmritiDecl, impureKriya: Set<string>) {
+  private checkSmriti(decl: SmritiDecl, impureKriya: Set<string>, sangrahaDecls: Map<string, SangrahaDecl>) {
     this.checkIti(decl.name, decl.itiName, decl.pos)
     const participantNames = new Set(decl.participants.map(p => p.name))
     for (const p of decl.participants) this.checkIti(p.name, p.itiName, p.pos)
@@ -102,7 +111,7 @@ class Checker {
     for (const k of decl.kriya) this.checkKriya(k, impureKriya)
     if (decl.sthitiBlock) this.checkSthitiBlock(decl.sthitiBlock)
     if (decl.trigger) this.checkGhatana(decl.trigger, externalInputs)
-    if (decl.flow) this.checkFlow(decl.flow, participantNames, externalInputs)
+    if (decl.flow) this.checkFlow(decl.flow, participantNames, externalInputs, false, sangrahaDecls)
   }
 
   private checkGhatana(ghatana: GhatanaDecl, aagamaFields: Map<string, SmritiType>) {
@@ -133,7 +142,7 @@ class Checker {
     if (ghatana.kaarya) this.checkExpression(ghatana.kaarya)
   }
 
-  private checkSutra(decl: SutraDecl, impureKriya: Set<string>) {
+  private checkSutra(decl: SutraDecl, impureKriya: Set<string>, sangrahaDecls: Map<string, SangrahaDecl>) {
     this.checkIti(decl.name, decl.itiName, decl.pos)
     if (decl.aagama)  this.checkTypedFields(decl.aagama)
     if (decl.nirgama) this.checkTypedFields(decl.nirgama)
@@ -147,7 +156,7 @@ class Checker {
     for (const item of decl.flow.items) {
       if (item.kind === 'aadesha') this.checkPada(item.pada, new Set(), new Set(), new Map())
     }
-    this.checkFlow(decl.flow, new Set(), externalInputs)
+    this.checkFlow(decl.flow, new Set(), externalInputs, false, sangrahaDecls)
   }
 
   // ─── Expression types ─────────────────────────────────────────────────────
@@ -268,13 +277,13 @@ class Checker {
   // isParallelTrack: when true (anubhaga inner track), skip terminal check and data flow.
   // Terminal semantics don't apply to tracks — they exit via anugama.
   // Data flow is handled by the outer checkDataFlow with full outer context.
-  private checkFlow(flow: FlowDecl, participants: Set<string>, externalInputs?: Map<string, SmritiType>, isParallelTrack = false) {
+  private checkFlow(flow: FlowDecl, participants: Set<string>, externalInputs?: Map<string, SmritiType>, isParallelTrack = false, sangrahaDecls: Map<string, SangrahaDecl> = new Map()) {
     const stepNames = this.collectStepNames(flow)
     const stepByName = this.collectStepByName(flow)
     this.checkStepUniqueness(flow)
 
     for (const item of flow.items) {
-      this.checkFlowItem(item, stepNames, participants, stepByName)
+      this.checkFlowItem(item, stepNames, participants, stepByName, sangrahaDecls)
     }
 
     if (!isParallelTrack) {
@@ -418,7 +427,7 @@ class Checker {
     }
   }
 
-  private checkFlowItem(item: FlowItem, stepNames: Set<string>, participants: Set<string>, stepByName: Map<string, PadaDecl>) {
+  private checkFlowItem(item: FlowItem, stepNames: Set<string>, participants: Set<string>, stepByName: Map<string, PadaDecl>, sangrahaDecls: Map<string, SangrahaDecl> = new Map()) {
     switch (item.kind) {
       case 'pada':     return this.checkPada(item, stepNames, participants, stepByName)
       case 'aadesha':  return this.checkPada(item.pada, stepNames, participants, stepByName)
@@ -428,7 +437,7 @@ class Checker {
         for (const track of item.tracks) {
           const inner = { kind: 'pravah' as const, items: track, pos: item.pos }
           // isParallelTrack=true: skip terminal check and data flow (handled by outer checkDataFlow with context)
-          this.checkFlow(inner, participants, undefined, true)
+          this.checkFlow(inner, participants, undefined, true, sangrahaDecls)
         }
         return
       }
@@ -452,17 +461,20 @@ class Checker {
         const t = item.target
         // bare name (e.g. aavaha payment-gateway) is an external service reference — not validated against local steps
         if (typeof t !== 'string') {
-          // TODO Layer 6 wire-up: if t.namespace matches a SangrahaDecl name in this file,
-          // validate t.name is one of: likha, pathana, uddhaara, lopa
-          // and check item.aagama/nirgama types against the store's mukhya + vivara schema.
-          // qualified aavaha: gov.pan-verification — validate namespace is imported
-          const ns = this.context?.imports.get(t.namespace)
-          if (!ns) {
-            this.fail(
-              `aavaha namespace '${t.namespace}' is not imported — ` +
-              `add: sangama ${t.namespace} { yuja: "./file.smr" }`,
-              item.pos,
-            )
+          const store = sangrahaDecls.get(t.namespace)
+          if (store) {
+            // aavaha store.op — dispatch to a sangraha (persistent store) operation
+            this.checkSangrahaAavaha(item, t.name, store)
+          } else {
+            // qualified aavaha: gov.pan-verification — validate namespace is imported
+            const ns = this.context?.imports.get(t.namespace)
+            if (!ns) {
+              this.fail(
+                `aavaha namespace '${t.namespace}' is not imported — ` +
+                `add: sangama ${t.namespace} { yuja: "./file.smr" }`,
+                item.pos,
+              )
+            }
           }
         }
         return
@@ -804,6 +816,65 @@ class Checker {
         this.fail(
           `sangraha '${decl.name}': ${opName} bound to '${kriyaName}' but no such kriya exists in this file`,
           decl.pos,
+        )
+      }
+    }
+  }
+
+  // Validates `aavaha store.op { aagama ... nirgama ... }` — the Layer 6.2 flow wire-up.
+  // op must be a bound sangraha operation; aagama/nirgama fields must match the store's
+  // mukhya + vivara schema by name and type. pathana/lopa additionally require the mukhya
+  // field in aagama since they operate on one identified record.
+  private checkSangrahaAavaha(item: AavahaDecl, opName: string, store: SangrahaDecl) {
+    const validOps = ['likha', 'pathana', 'uddhaara', 'lopa'] as const
+    if (!(validOps as readonly string[]).includes(opName)) {
+      this.fail(
+        `aavaha '${store.name}.${opName}': not a valid sangraha operation — ` +
+        `use one of ${validOps.join(', ')}`,
+        item.pos,
+      )
+      return
+    }
+    const op = opName as typeof validOps[number]
+    const boundKriya = store[op]
+    if (boundKriya === undefined) {
+      this.fail(
+        `aavaha '${store.name}.${op}': sangraha '${store.name}' has no ${op} operation bound`,
+        item.pos,
+      )
+      return
+    }
+
+    const schema = new Map<string, SmritiType>()
+    if (store.mukhya) schema.set(store.mukhya.name, store.mukhya.type)
+    for (const f of store.vivara) schema.set(f.name, f.type)
+
+    const checkFields = (fields: TypedField[], label: 'aagama' | 'nirgama') => {
+      for (const f of fields) {
+        const expected = schema.get(f.name)
+        if (expected === undefined) {
+          this.fail(
+            `aavaha '${store.name}.${op}' ${label} '${f.name}' is not a field on sangraha '${store.name}' — ` +
+            `available: ${[...schema.keys()].join(', ') || '(none)'}`,
+            f.pos,
+          )
+        } else if (!this.typesMatch(f.type, expected)) {
+          this.fail(
+            `aavaha '${store.name}.${op}' ${label} '${f.name}': declared as ${typeStr(f.type)} but sangraha field is ${typeStr(expected)}`,
+            f.pos,
+          )
+        }
+      }
+    }
+    checkFields(item.aagama, 'aagama')
+    checkFields(item.nirgama, 'nirgama')
+
+    if ((op === 'pathana' || op === 'lopa') && store.mukhya) {
+      const hasKey = item.aagama.some(f => f.name === store.mukhya!.name)
+      if (!hasKey) {
+        this.fail(
+          `aavaha '${store.name}.${op}': aagama must include the mukhya field '${store.mukhya.name}' to identify the record`,
+          item.pos,
         )
       }
     }

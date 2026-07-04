@@ -1,7 +1,7 @@
 import type { FlowItem, FlowDecl, PadaDecl, SmritiDecl } from './ast.js'
 import { nameRefStr } from './ast.js'
 import { evaluate, evaluateKriya, buildInitialState, type KriyaEnv, type Payload } from './evaluator.js'
-import type { Registry } from './registry.js'
+import type { Registry, SangrahaEnv } from './registry.js'
 
 // ─── Result types ─────────────────────────────────────────────────────────────
 
@@ -26,12 +26,13 @@ export function executeSmriti(
   env: KriyaEnv,
   registry?: Registry,
   budget?: number[],
+  stores?: SangrahaEnv,
 ): FlowResult {
   if (!decl.flow) throw new Error(`smriti '${decl.name}' has no pravah`)
   const seed: Payload = decl.sthitiBlock ? buildInitialState(decl.sthitiBlock, env) : {}
   const produced: Payload = { ...seed, ...initial }
   const b = budget ?? [10_000]
-  return runFlow(decl.flow.items, produced, env, b, registry)
+  return runFlow(decl.flow.items, produced, env, b, registry, stores)
 }
 
 export function executeFlow(
@@ -40,9 +41,10 @@ export function executeFlow(
   env: KriyaEnv,
   maxSteps = 10_000,
   registry?: Registry,
+  stores?: SangrahaEnv,
 ): FlowResult {
   const budget = [maxSteps]
-  return runFlow(flow.items, { ...initial }, env, budget, registry)
+  return runFlow(flow.items, { ...initial }, env, budget, registry, stores)
 }
 
 // ─── Core executor ────────────────────────────────────────────────────────────
@@ -53,6 +55,7 @@ function runFlow(
   env: KriyaEnv,
   budget: number[],
   registry?: Registry,
+  stores?: SangrahaEnv,
 ): FlowResult {
   const log: StepLog[] = []
   const stepIndex = buildStepIndex(items)
@@ -122,7 +125,7 @@ function runFlow(
 
       case 'anubhaga': {
         for (const track of item.tracks) {
-          const trackResult = runFlow(track, { ...produced }, env, budget, registry)
+          const trackResult = runFlow(track, { ...produced }, env, budget, registry, stores)
           Object.assign(produced, trackResult.produced)
           log.push(...trackResult.log)
           if (trackResult.outcome === 'anaapta') {
@@ -138,6 +141,28 @@ function runFlow(
         break
 
       case 'aavaha': {
+        const t = item.target
+        if (typeof t !== 'string' && stores?.has(t.namespace)) {
+          const store = stores.get(t.namespace)!
+          const opName = t.name as 'likha' | 'pathana' | 'uddhaara' | 'lopa'
+          const kriyaName = store[opName]
+          const kriya = kriyaName ? env.get(kriyaName) : undefined
+          if (!kriya) {
+            log.push({ name: `${t.namespace}.${t.name}`, status: 'skipped', produced: {} })
+          } else {
+            const args = item.aagama.map(f => produced[f.name] ?? null)
+            const result = evaluateKriya(kriya, args, env)
+            const outputs: Payload = {}
+            for (let i = 0; i < item.nirgama.length && i < kriya.nirgama.length; i++) {
+              outputs[item.nirgama[i].name] = result[kriya.nirgama[i].name] ?? null
+            }
+            Object.assign(produced, outputs)
+            log.push({ name: `${t.namespace}.${t.name}`, status: 'completed', produced: outputs })
+          }
+          cursor++
+          break
+        }
+
         const targetName = nameRefStr(item.target)
         const sub = registry?.get(targetName)
         if (!sub) {

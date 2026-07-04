@@ -12,7 +12,7 @@ import { toSchema } from '../src/backends/schema.js'
 import { computeIntervalMs } from '../src/scheduler.js'
 import { evaluateGhatana, evaluateKriya, buildKriyaEnv, type Payload } from '../src/evaluator.js'
 import { executeSmriti } from '../src/executor.js'
-import { buildRegistry } from '../src/registry.js'
+import { buildRegistry, buildSangrahaEnv } from '../src/registry.js'
 
 const VERSION = '0.1.0'
 
@@ -244,9 +244,10 @@ function run() {
     }
     const env = buildKriyaEnv(ast)
     const registry = buildRegistry(ast)
+    const stores = buildSangrahaEnv(ast)
     let flowResult
     try {
-      flowResult = executeSmriti(smritiDecl, payload, env, registry)
+      flowResult = executeSmriti(smritiDecl, payload, env, registry, undefined, stores)
     } catch (e) {
       console.error(`smr run: ${String(e)}`); process.exit(1)
     }
@@ -341,6 +342,7 @@ function run() {
 
     const env = buildKriyaEnv(ast)
     const registry = buildRegistry(ast)
+    const stores = buildSangrahaEnv(ast)
     const runOnce = flags.has('--once')
 
     const label = `${smritiDecl.itiName ?? smritiDecl.name}`
@@ -364,7 +366,7 @@ function run() {
       }
       let flowResult
       try {
-        flowResult = executeSmriti(smritiDecl!, payload, env, registry)
+        flowResult = executeSmriti(smritiDecl!, payload, env, registry, undefined, stores)
       } catch (e) {
         console.log(`[run ${runCount}] ${ts}  error: ${String(e)}`)
         return
